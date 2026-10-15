@@ -18,7 +18,8 @@ window.onload = function () {
     google.accounts.id.initialize({
         client_id: "440151498628-lh87c1pfc7asgrohle857uls25jvnkvu.apps.googleusercontent.com",
         callback: handleCredentialResponse,
-        hosted_domain: "euroavia-bucuresti.ro"
+        hosted_domain: "euroavia-bucuresti.ro",
+        auto_select: false // Previne selectarea automată a contului principal de pe Android
     });
     google.accounts.id.renderButton(
         document.getElementById("googleButton"),
@@ -83,6 +84,12 @@ function handleCredentialResponse(response) {
 
     } else {
         alert("Eroare de acces: Te rugăm să folosești exclusiv adresa de email @euroavia-bucuresti.ro!");
+        
+        // Deconectăm forțat contul greșit pentru a-ți permite să alegi/adaugi altul!
+        google.accounts.id.disableAutoSelect();
+        google.accounts.id.revoke(emailUser, done => {
+            console.log("Sesiunea contului personal a fost ștearsă. Acum poți alege alt cont.");
+        });
     }
 }
 
