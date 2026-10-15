@@ -15,37 +15,49 @@ let departmentMembersLoaded = false;
 // 2. LOGICA DE AUTENTIFICARE GOOGLE (Hibrid: Nativ & Web)
 // ==========================================
 window.onload = async function () {
+    const btnWrapper = document.getElementById("googleButton");
+
     // Verificăm dacă suntem într-un mediu nativ (APK pe telefon) generat de Capacitor
     if (window.Capacitor && window.Capacitor.isNativePlatform()) {
         
-        // Inițializăm pluginul nativ
-        const { GoogleAuth } = window.Capacitor.Plugins;
-        GoogleAuth.initialize({
-            clientId: '440151498628-lh87c1pfc7asgrohle857uls25jvnkvu.apps.googleusercontent.com',
-            scopes: ['profile', 'email'],
-            grantOfflineAccess: true,
-        });
-
-        // Înlocuim vizual butonul Google cu un buton personalizat care va chema pluginul nativ
-        const btnWrapper = document.getElementById("googleButton");
+        // 1. DESENĂM BUTONUL NATIV PRIMUL LUCRU (pentru a evita ecranul gol)
         btnWrapper.innerHTML = `
-            <button onclick="nativeGoogleLogin()" style="width: 100%; padding: 12px; font-size: 16px; background: white; color: #555; border: 1px solid #ccc; border-radius: 4px; display: flex; align-items: center; justify-content: center; gap: 12px; font-family: Roboto, sans-serif; font-weight: 500; cursor: pointer;">
+            <button onclick="nativeGoogleLogin()" style="width: 100%; padding: 12px; font-size: 16px; background: white; color: #555; border: 1px solid #ccc; border-radius: 4px; display: flex; align-items: center; justify-content: center; gap: 12px; font-family: Roboto, sans-serif; font-weight: 500; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.2);">
                 <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" width="20" alt="G Logo">
                 Conectare cu Google
             </button>
         `;
+
+        // 2. Încercăm inițializarea pluginului în siguranță
+        try {
+            const { GoogleAuth } = window.Capacitor.Plugins;
+            if (GoogleAuth) {
+                GoogleAuth.initialize({
+                    clientId: '440151498628-lh87c1pfc7asgrohle857uls25jvnkvu.apps.googleusercontent.com',
+                    scopes: ['profile', 'email'],
+                    grantOfflineAccess: true,
+                });
+            }
+        } catch (err) {
+            console.warn("Eroare la inițializarea pluginului GoogleAuth:", err);
+        }
+
     } else {
         // Suntem pe Web clasic, folosim soluția standard
-        google.accounts.id.initialize({
-            client_id: "440151498628-lh87c1pfc7asgrohle857uls25jvnkvu.apps.googleusercontent.com",
-            callback: handleCredentialResponse,
-            hosted_domain: "euroavia-bucuresti.ro",
-            auto_select: false // Previne autologin-ul pe browser web
-        });
-        google.accounts.id.renderButton(
-            document.getElementById("googleButton"),
-            { theme: "outline", size: "large", text: "continue_with" }
-        );
+        try {
+            google.accounts.id.initialize({
+                client_id: "440151498628-lh87c1pfc7asgrohle857uls25jvnkvu.apps.googleusercontent.com",
+                callback: handleCredentialResponse,
+                hosted_domain: "euroavia-bucuresti.ro",
+                auto_select: false // Previne autologin-ul pe browser web
+            });
+            google.accounts.id.renderButton(
+                btnWrapper,
+                { theme: "outline", size: "large", text: "continue_with" }
+            );
+        } catch (e) {
+            btnWrapper.innerHTML = "<p style='color:red; text-align:center;'>Eroare la încărcarea modulului Web Google.</p>";
+        }
     }
 };
 
@@ -53,6 +65,13 @@ window.onload = async function () {
 async function nativeGoogleLogin() {
     try {
         const { GoogleAuth } = window.Capacitor.Plugins;
+        
+        // Verificăm dacă plugin-ul a fost inclus corect în APK
+        if (!GoogleAuth) {
+            alert("Eroare critică: Plugin-ul GoogleAuth nu a fost compilat în acest APK. Asigură-te că package.json și folderul android au fost trimise pe GitHub.");
+            return;
+        }
+
         const googleUser = await GoogleAuth.signIn();
         
         // Simulăm răspunsul ca să funcționeze cu codul tău existent
@@ -61,7 +80,7 @@ async function nativeGoogleLogin() {
         
     } catch (error) {
         console.error("Eroare la logarea nativă:", error);
-        alert("Autentificarea a eșuat sau a fost anulată.");
+        alert("Eroare la logare: " + (error.message || JSON.stringify(error)));
     }
 }
 
@@ -126,7 +145,9 @@ function handleCredentialResponse(response) {
         // Deconectăm forțat contul greșit pentru a-ți permite să alegi altul
         if (window.Capacitor && window.Capacitor.isNativePlatform()) {
             const { GoogleAuth } = window.Capacitor.Plugins;
-            GoogleAuth.signOut();
+            if (GoogleAuth) {
+                GoogleAuth.signOut();
+            }
         } else {
             google.accounts.id.disableAutoSelect();
             google.accounts.id.revoke(emailUser, done => {
