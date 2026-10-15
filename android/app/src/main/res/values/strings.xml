@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Euroavia Bucuresti</string>
+    <string name="title_activity_main">Euroavia Bucuresti</string>
+    <string name="package_name">ro.euroaviabucuresti.app</string>
+    <string name="custom_url_scheme">ro.euroaviabucuresti.app</string>
+</resources>

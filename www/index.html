@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>EUROAVIA App</title>
+    
+    <link rel="stylesheet" href="style.css">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#003366">
+    <link rel="apple-touch-icon" href="icon-192.png">
+
+    <!-- Material Icons -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body>
+
+    <!-- Ecranul de Conectare -->
+    <div id="loginScreen" class="login-container">
+        <div class="login-box">
+            <h2>EUROAVIA București</h2>
+            <p>Conectează-te cu adresa instituțională</p>
+            <div id="googleButton" class="google-btn-wrapper"></div>
+        </div>
+    </div>
+
+    <!-- Aplicația Principală -->
+    <div id="mainApp" style="display: none;">
+        
+        <!-- Header cu buton de meniu în stânga -->
+        <header class="app-header">
+            <button class="menu-btn" onclick="toggleSideMenu()" aria-label="Deschide meniul">
+                <i class="material-icons">menu</i>
+            </button>
+            <h1 id="topBarTitle">Dashboard</h1>
+        </header>
+
+        <!-- Overlay întunecat pentru fundal când meniul este deschis -->
+        <div id="menuOverlay" class="menu-overlay" onclick="toggleSideMenu()"></div>
+
+        <!-- Meniul Lateral (Side Drawer) -->
+        <aside id="sideMenu" class="side-menu">
+            <div class="side-menu-header">
+                <img id="menuProfilePic" src="icon-192.png" alt="Poză profil" class="profile-pic">
+                <h3 id="menuUserName">Membru EUROAVIA</h3>
+            </div>
+
+            <div class="side-menu-body">
+                <button class="side-menu-btn" onclick="openUserProfile()">
+                    <i class="material-icons">person</i>
+                    <span>Profilul tău</span>
+                </button>
+            </div>
+
+            <div class="side-menu-footer">
+                <button class="side-menu-btn footer-btn" onclick="openAppDetails()">
+                    <i class="material-icons">info_outline</i>
+                    <span>Detalii aplicație</span>
+                </button>
+            </div>
+        </aside>
+
+        <main id="contentArea" class="content-area">
+            
+            <!-- TAB 1: DASHBOARD (Task-uri și Ședințe) -->
+            <div id="tab-tasks" class="tab-content active">
+                <div class="container" id="tasksView">
+                    <section class="dashboard-section" style="padding-top: 10px;">
+                        <div id="tasksContainer"><p class="placeholder-text">Se încarcă...</p></div>
+                    </section>
+                </div>
+                <div class="container" id="meetingsView" style="display: none;">
+                    <section class="dashboard-section" style="padding-top: 10px;">
+                        <div id="meetingsContainer"><p class="placeholder-text">Se încarcă...</p></div>
+                    </section>
+                </div>
+            </div>
+
+            <!-- TAB 2: ORGA / TRAINER -->
+            <div id="tab-orga" class="tab-content">
+                <div class="container">
+                    <section class="dashboard-section">
+                        <div style="display: flex; justify-content: flex-end; margin-top: 10px; margin-bottom: 15px;">
+                            <button id="btnEditEvents" class="action-btn" style="display: none; padding: 5px 12px; font-size: 12px; background-color: #666;" onclick="showEventsForm()">Modifică</button>
+                        </div>
+                        <div id="savedEventsContainer" style="display: none;"></div>
+                        <div class="card" id="eventsFormContainer">
+                            <p class="placeholder-text">Se încarcă evenimentele...</p>
+                        </div>
+                    </section>
+                </div>
+            </div>
+
+            <!-- TAB 3: POSTĂRI -->
+            <div id="tab-posts" class="tab-content">
+                <div class="container">
+                    <p class="placeholder-text" style="margin-top: 20px;">Secțiune în lucru.</p>
+                </div>
+            </div>
+
+            <!-- TAB 4: MEMBRI -->
+            <div id="tab-members" class="tab-content">
+                <div class="container">
+                    <section class="dashboard-section" style="padding-top: 10px;">
+                        <span id="deptNameTitle" style="display: none;"></span>
+                        
+                        <div id="leadersContainer"></div>
+                        
+                        <div id="departmentMembersContainer">
+                            <p class="placeholder-text">Se încarcă membrii departamentului...</p>
+                        </div>
+                    </section>
+                </div>
+            </div>
+
+            <!-- TAB 5: JOCURI (QUIZ) -->
+            <div id="tab-games" class="tab-content">
+                <div class="container">
+                    <section class="dashboard-section" style="padding-top: 10px;">
+                        
+                        <!-- ECRAN START QUIZ -->
+                        <div id="quizStartScreen" class="card" style="text-align: center;">
+                            <h2 style="color: #003366; margin-bottom: 15px;">Quiz: Întrebări Tehnice</h2>
+                            <p style="margin-bottom: 25px; color: #555;">Testează-ți cunoștințele. <br><br><b>Scor:</b> 5 pct (bază) + max 5 pct (timp). Ai 30s per întrebare!</p>
+                            
+                            <button class="action-btn" style="width: 100%; margin-bottom: 25px;" onclick="startQuiz(false)">Mod Antrenament (Singleplayer)</button>
+                            
+                            <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #ddd;">
+                                <h3 style="margin-bottom: 15px; color: #d9534f;">⚔️ BATTLE MODE (1 vs 1)</h3>
+                                
+                                <button class="action-btn" style="width: 100%; background-color: #d9534f; margin-bottom: 15px;" onclick="createBattleRoom()">Crează Cameră (Invite)</button>
+                                
+                                <div style="display: flex; flex-direction: column; gap: 10px;">
+                                    <input type="text" id="inviteCodeInput" placeholder="Introdu codul..." style="padding: 12px; border: 1px solid #ccc; border-radius: 6px; text-transform: uppercase; font-weight: bold; text-align: center; font-size: 16px;">
+                                    <button class="action-btn" style="background-color: #28a745; width: 100%;" onclick="joinBattleRoom()">Intră</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ECRAN MATCHMAKING (AȘTEPTARE INVITE) -->
+                        <div id="quizMatchmakingScreen" class="card" style="display: none; text-align: center;">
+                            <h2 style="color: #003366; margin-bottom: 15px;">Așteptare adversar...</h2>
+                            <div class="spinner-pulse"></div>
+                            <p style="margin-top: 20px; color: #666; font-size: 14px;">Trimite acest cod adversarului pentru a se conecta:</p>
+                            
+                            <h1 id="displayInviteCode" style="font-size: 48px; letter-spacing: 5px; color: #d9534f; margin: 15px 0;">...</h1>
+                            
+                            <button class="action-btn" style="width: 100%; background-color: #666;" onclick="cancelBattleRoom()">Anulează / Renunță</button>
+                        </div>
+
+                        <!-- ECRAN QUIZ ACTIV -->
+                        <div id="quizActiveScreen" class="card" style="display: none;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 10px; font-weight: bold; color: #003366; font-size: 14px;">
+                                <span id="quizQuestionCounter">1/10</span>
+                                
+                                <!-- Afișaj Scor Singleplayer -->
+                                <span id="quizScoreTracker" style="display: none;">Scor: 0</span>
+                                
+                                <!-- Afișaj Scor Multiplayer Battle -->
+                                <div id="battleScoreTracker" style="display: none; display: flex; gap: 15px; color: #333;">
+                                    <span style="color: #28a745;">Tu: <b id="myBattleScore">0</b></span>
+                                    <span style="color: #d9534f;">Adversar: <b id="oppBattleScore">0</b></span>
+                                </div>
+                            </div>
+                            
+                            <div class="quiz-timer-container">
+                                <div id="quizTimerBar" class="quiz-timer-bar"></div>
+                            </div>
+                            
+                            <img id="quizQuestionImage" src="" alt="Imagine întrebare" class="quiz-image" style="display: none;">
+                            
+                            <h3 id="quizQuestionText" style="margin-bottom: 20px; font-size: 16px; color: #111;"></h3>
+                            <div id="quizOptionsContainer" class="quiz-options"></div>
+                        </div>
+
+                        <!-- ECRAN REZULTATE SINGLEPLAYER -->
+                        <div id="quizResultScreen" class="card" style="display: none; text-align: center;">
+                            <h2 style="color: #003366; margin-bottom: 10px;">Ai terminat!</h2>
+                            <h1 id="quizFinalScore" style="font-size: 42px; color: #003366; margin-bottom: 10px;">0</h1>
+                            <p id="quizFeedbackMessage" style="font-weight: bold; margin-bottom: 25px; color: #333; line-height: 1.4;"></p>
+                            
+                            <button class="action-btn" style="width: 100%; margin-bottom: 25px;" onclick="resetQuizView()">Înapoi la Meniu</button>
+
+                            <h3 style="border-top: 1px solid #eee; padding-top: 15px; margin-bottom: 15px; color: #003366;">🏆 Clasament Top 5</h3>
+                            <ul id="quizLeaderboard" class="participants-list" style="margin-top: 10px; text-align: left;">
+                                <p class="placeholder-text">Se încarcă clasamentul...</p>
+                            </ul>
+                        </div>
+
+                        <!-- ECRAN REZULTATE BATTLE -->
+                        <div id="quizBattleResultScreen" class="card" style="display: none; text-align: center;">
+                            <h1 id="battleOutcomeTitle" style="font-size: 32px; margin-bottom: 15px;"></h1>
+                            
+                            <div style="display: flex; justify-content: space-around; margin-bottom: 25px; font-size: 20px; font-weight: bold;">
+                                <div style="color: #28a745;">Tu<br><span id="finalMyScore">0</span></div>
+                                <div style="color: #d9534f;">Adversar<br><span id="finalOppScore">0</span></div>
+                            </div>
+                            
+                            <p style="color: #666; margin-bottom: 20px; font-size: 14px;">Acest scor nu se salvează în clasamentul general.</p>
+                            
+                            <button class="action-btn" style="width: 100%;" onclick="resetQuizView()">Înapoi la Meniu</button>
+                        </div>
+
+                    </section>
+                </div>
+            </div>
+
+            <!-- TAB 6: PROFIL -->
+            <div id="tab-profile" class="tab-content">
+                <div class="container">
+                    <section class="dashboard-section" style="padding-top: 10px;">
+                        
+                        <!-- MODUL VIZUALIZARE (VIEW MODE) -->
+                        <div id="profileViewMode" class="card" style="text-align: center; position: relative; padding: 25px 15px;">
+                            
+                            <div style="position: relative; display: inline-block; margin-bottom: 15px;">
+                                <img id="profilePageImg" src="icon-192.png" alt="Poză profil" class="profile-pic-large">
+                            </div>
+                            
+                            <h3 id="profilePageName" style="color: #111; margin-bottom: 5px; font-size: 22px; font-weight: 700;">Nume Utilizator</h3>
+                            <span id="profilePageDept" class="badge" style="background-color: #e6f0fa; color: #003366; margin-bottom: 25px; font-size: 13px; padding: 6px 14px;">Departament</span>
+                            
+                            <div style="text-align: left; background: #f8f9fa; padding: 18px; border-radius: 10px; margin-bottom: 25px; border: 1px solid #eee;">
+                                <h4 style="color: #003366; margin-bottom: 10px; font-size: 13px; text-transform: uppercase; letter-spacing: 0.8px;">Despre mine</h4>
+                                <p id="profilePageBio" style="color: #555; font-size: 14px; line-height: 1.6; margin: 0; white-space: pre-wrap;">Nu ai adăugat nicio descriere încă.</p>
+                            </div>
+                            
+                            <button class="action-btn" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px;" onclick="toggleProfileEditMode(true)">
+                                <i class="material-icons" style="font-size: 20px;">edit</i> Modifică Profilul
+                            </button>
+                        </div>
+
+                        <!-- MODUL EDITARE (EDIT MODE) -->
+                        <div id="profileEditMode" class="card" style="display: none; text-align: left; padding: 25px 15px;">
+                            <h2 style="color: #003366; margin-bottom: 20px; text-align: center;">Editează Profilul</h2>
+                            
+                            <form id="profileForm" onsubmit="saveUserProfile(event)">
+                                <div class="event-form-group">
+                                    <p>Schimbă poza de profil:</p>
+                                    <input type="file" id="profileImageInput" accept="image/*" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; background: #f8f9fa;">
+                                </div>
+
+                                <div class="event-form-group" style="margin-top: 15px;">
+                                    <p>Despre tine (Bio):</p>
+                                    <textarea id="profileBioInput" rows="5" placeholder="Scrie câteva detalii despre experiența și pasiunile tale..." style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-family: inherit; font-size: 14px; resize: vertical;"></textarea>
+                                    <small style="display: block; margin-top: 8px; color: #666; font-size: 12px; line-height: 1.4; padding-left: 5px; border-left: 2px solid #003366;">
+                                        * Această descriere și poza vor fi folosite în secțiunea "Meet the trainers / orga".
+                                    </small>
+                                </div>
+
+                                <div style="display: flex; gap: 10px; margin-top: 25px;">
+                                    <button type="button" class="action-btn" style="flex: 1; background-color: #e0e0e0; color: #333;" onclick="toggleProfileEditMode(false)">Anulează</button>
+                                    <button type="submit" id="btnSaveProfile" class="action-btn" style="flex: 2;">Salvează</button>
+                                </div>
+                            </form>
+                        </div>
+
+                    </section>
+                </div>
+            </div>
+
+            <!-- TAB 7: DETALII APLICAȚIE -->
+            <div id="tab-app-details" class="tab-content">
+                <div class="container">
+                    <section class="dashboard-section" style="padding-top: 10px;">
+                        <div class="card" style="text-align: center; padding: 30px 15px;">
+                            
+                            <!-- Logo Aplicație -->
+<h2 style="color: #003366; margin-bottom: 5px; font-size: 22px;">EUROAVIA București</h2>
+                            <p style="color: #666; font-size: 14px; margin-bottom: 25px; font-weight: bold;">Versiune 1.0.0</p>
+                            
+                            <div style="text-align: left; background: #f8f9fa; padding: 18px; border-radius: 10px; font-size: 14px; color: #444; line-height: 1.6; border: 1px solid #e0e0e0; margin-bottom: 25px;">
+                                
+                                <!-- Secțiunea de Contribuții -->
+                                <div style="margin-bottom: 15px; border-bottom: 1px solid #ddd; padding-bottom: 15px;">
+                                    <p style="margin-bottom: 10px; display: flex; align-items: center; gap: 8px; font-size: 15px;">
+                                        <i class="material-icons" style="color: #003366; font-size: 20px;">engineering</i> 
+                                        <strong style="color: #003366;">Dezvoltatori</strong>
+                                    </p>
+                                    <ul style="list-style: none; padding-left: 28px; margin: 0; font-size: 13px; color: #555;">
+                                        <li style="margin-bottom: 6px;">
+                                            <b style="color: #333;">Dezvoltator principal:</b> Simiuc Mihai-Ciprian
+                                        </li>
+                                        <li style="margin-bottom: 6px;">
+                                            <b style="color: #333;">Backend & API:</b> Simiuc Mihai-Ciprian
+                                        </li>
+                                        <li style="margin-bottom: 6px;">
+                                            <b style="color: #333;">Design UX/UI:</b> Simiuc Mihai-Ciprian
+                                        </li>
+                                        <li style="margin-bottom: 6px;">
+                                            <b style="color: #333;">Vanatori de Bug-uri:</b>
+                                        </li>
+                                    </ul>
+                                </div>
+
+                                <p style="margin-bottom: 12px; display: flex; align-items: flex-start; gap: 8px;">
+                                    <i class="material-icons" style="color: #003366; font-size: 18px; margin-top: 2px;">info</i>
+                                    <span>Aplicație dedicată exclusiv membrilor EUROAVIA București pentru managementul intern, participarea la evenimente, task-uri și comunicare.</span>
+                                </p>
+                                <p style="display: flex; align-items: center; gap: 8px;">
+                                    <i class="material-icons" style="color: #003366; font-size: 18px;">support_agent</i>
+                                    <span>Pentru suport tehnic, te rugăm să contactezi departamentul IT.</span>
+                                </p>
+                            </div>
+
+                            <button class="action-btn" style="width: 100%; display: flex; justify-content: center; align-items: center; gap: 10px; background-color: #f0f0f0; color: #003366; border: 1px solid #ddd;" onclick="window.open('https://euroavia-bucuresti.ro', '_blank')">
+                                <i class="material-icons">language</i> Accesează Website-ul
+                            </button>
+                        </div>
+                    </section>
+                </div>
+            </div>
+
+        </main>
+
+        <!-- Butonul Plutitor -->
+        <button id="toggleTasksMeetingsBtn" class="floating-toggle-btn" onclick="toggleTasksMeetings()">Ședințe</button>
+
+        <!-- Bottom Navigation Bar -->
+        <nav class="bottom-nav">
+            <a href="#" class="nav-item active" onclick="switchTab('tasks', 'Dashboard', this)"><i class="material-icons">check_circle</i><span>Task-uri</span></a>
+            <a href="#" class="nav-item" onclick="switchTab('orga', 'Management', this)"><i class="material-icons">business_center</i><span id="nav-orga-text">ORGA</span></a>
+            <a href="#" class="nav-item" onclick="switchTab('posts', 'Feed Postări', this)"><i class="material-icons">dynamic_feed</i><span>Postări</span></a>
+            <a href="#" class="nav-item" onclick="switchTab('members', 'Echipă', this)"><i class="material-icons">groups</i><span>Membri</span></a>
+            <a href="#" class="nav-item" onclick="switchTab('games', 'Jocuri', this)"><i class="material-icons">sports_esports</i><span>Jocuri</span></a>
+        </nav>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

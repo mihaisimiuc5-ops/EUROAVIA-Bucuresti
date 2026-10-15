@@ -1,0 +1,51 @@
+name: Build Android APK
+
+on:
+  push:
+    branches:
+      - main # Rulează automat când dai push pe branch-ul main (sau master)
+  workflow_dispatch: # Îți permite să pornești procesul manual din interfața GitHub
+
+jobs:
+  build-apk:
+    name: Construire aplicație Android
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 1. Descarcă codul sursă
+        uses: actions/checkout@v4
+
+      - name: 2. Configurează Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20' # Pune versiunea ta de Node (ex: 18 sau 20)
+          cache: 'npm'
+
+      - name: 3. Configurează Java JDK (necesar pentru Android)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17' # Java 17 este standardul actual pentru Gradle/Android
+
+      - name: 4. Instalează pachetele NPM
+        run: npm install
+
+      - name: 5. Construiește aplicația Web (Ionic/Capacitor)
+        run: npm run build
+
+      - name: 6. Sincronizează fișierele web cu folderul Android
+        run: npx cap sync android
+
+      - name: 7. Oferă permisiuni de execuție pentru Gradle
+        working-directory: ./android
+        run: chmod +x gradlew
+
+      - name: 8. Compilează fișierul .APK (Debug)
+        working-directory: ./android
+        run: ./gradlew assembleDebug
+
+      - name: 9. Salvează APK-ul ca Artifact pentru descărcare
+        uses: actions/upload-artifact@v4
+        with:
+          name: EUROAVIA Bucuresti
+          path: android/app/build/outputs/apk/debug/app-debug.apk
