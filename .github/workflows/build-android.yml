@@ -3,8 +3,8 @@ name: Build Android APK
 on:
   push:
     branches:
-      - main # Rulează automat când dai push pe branch-ul main (sau master)
-  workflow_dispatch: # Îți permite să pornești procesul manual din interfața GitHub
+      - main
+  workflow_dispatch:
 
 jobs:
   build-apk:
@@ -18,34 +18,33 @@ jobs:
       - name: 2. Configurează Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20' # Pune versiunea ta de Node (ex: 18 sau 20)
+          node-version: '24' # Actualizat la versiunea 24 pentru a elimina avertismentul
           cache: 'npm'
 
-      - name: 3. Configurează Java JDK (necesar pentru Android)
-        uses: actions/setup-java@v4
+      - name: 3. Configurează Java JDK
+        uses: actions/setup-java@v5 # Actualizat la v5 pentru a elimina avertismentul
         with:
           distribution: 'zulu'
-          java-version: '17' # Java 17 este standardul actual pentru Gradle/Android
+          java-version: '17'
 
       - name: 4. Instalează pachetele NPM
         run: npm install
 
-      - name: 5. Construiește aplicația Web (Ionic/Capacitor)
-        run: npm run build
+      # Pasul de "npm run build" a fost șters complet, trecem direct la sincronizare
 
-      - name: 6. Sincronizează fișierele web cu folderul Android
+      - name: 5. Sincronizează fișierele web cu folderul Android
         run: npx cap sync android
 
-      - name: 7. Oferă permisiuni de execuție pentru Gradle
+      - name: 6. Oferă permisiuni de execuție pentru Gradle
         working-directory: ./android
         run: chmod +x gradlew
 
-      - name: 8. Compilează fișierul .APK (Debug)
+      - name: 7. Compilează fișierul .APK (Debug)
         working-directory: ./android
         run: ./gradlew assembleDebug
 
-      - name: 9. Salvează APK-ul ca Artifact pentru descărcare
+      - name: 8. Salvează APK-ul ca Artifact pentru descărcare
         uses: actions/upload-artifact@v4
         with:
-          name: EUROAVIA Bucuresti
+          name: Euroavia
           path: android/app/build/outputs/apk/debug/app-debug.apk
