@@ -4,4 +4,5 @@
     <string name="title_activity_main">Euroavia Bucuresti</string>
     <string name="package_name">ro.euroaviabucuresti.app</string>
     <string name="custom_url_scheme">ro.euroaviabucuresti.app</string>
+    <string name="server_client_id">440151498628-lh87c1pfc7asgrohle857uls25jvnkvu.apps.googleusercontent.com</string>
 </resources>

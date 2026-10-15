@@ -12,20 +12,58 @@ let userSavedEvents = [];
 let departmentMembersLoaded = false;
 
 // ==========================================
-// 2. LOGICA DE AUTENTIFICARE GOOGLE
+// 2. LOGICA DE AUTENTIFICARE GOOGLE (Hibrid: Nativ & Web)
 // ==========================================
-window.onload = function () {
-    google.accounts.id.initialize({
-        client_id: "440151498628-lh87c1pfc7asgrohle857uls25jvnkvu.apps.googleusercontent.com",
-        callback: handleCredentialResponse,
-        hosted_domain: "euroavia-bucuresti.ro",
-        auto_select: false // Previne selectarea automată a contului principal de pe Android
-    });
-    google.accounts.id.renderButton(
-        document.getElementById("googleButton"),
-        { theme: "outline", size: "large", text: "continue_with" }
-    );
+window.onload = async function () {
+    // Verificăm dacă suntem într-un mediu nativ (APK pe telefon) generat de Capacitor
+    if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+        
+        // Inițializăm pluginul nativ
+        const { GoogleAuth } = window.Capacitor.Plugins;
+        GoogleAuth.initialize({
+            clientId: '440151498628-lh87c1pfc7asgrohle857uls25jvnkvu.apps.googleusercontent.com',
+            scopes: ['profile', 'email'],
+            grantOfflineAccess: true,
+        });
+
+        // Înlocuim vizual butonul Google cu un buton personalizat care va chema pluginul nativ
+        const btnWrapper = document.getElementById("googleButton");
+        btnWrapper.innerHTML = `
+            <button onclick="nativeGoogleLogin()" style="width: 100%; padding: 12px; font-size: 16px; background: white; color: #555; border: 1px solid #ccc; border-radius: 4px; display: flex; align-items: center; justify-content: center; gap: 12px; font-family: Roboto, sans-serif; font-weight: 500; cursor: pointer;">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" width="20" alt="G Logo">
+                Conectare cu Google
+            </button>
+        `;
+    } else {
+        // Suntem pe Web clasic, folosim soluția standard
+        google.accounts.id.initialize({
+            client_id: "440151498628-lh87c1pfc7asgrohle857uls25jvnkvu.apps.googleusercontent.com",
+            callback: handleCredentialResponse,
+            hosted_domain: "euroavia-bucuresti.ro",
+            auto_select: false // Previne autologin-ul pe browser web
+        });
+        google.accounts.id.renderButton(
+            document.getElementById("googleButton"),
+            { theme: "outline", size: "large", text: "continue_with" }
+        );
+    }
 };
+
+// Funcția care gestionează logarea prin pluginul nativ Capacitor
+async function nativeGoogleLogin() {
+    try {
+        const { GoogleAuth } = window.Capacitor.Plugins;
+        const googleUser = await GoogleAuth.signIn();
+        
+        // Simulăm răspunsul ca să funcționeze cu codul tău existent
+        const fakeResponseObj = { credential: googleUser.authentication.idToken };
+        handleCredentialResponse(fakeResponseObj);
+        
+    } catch (error) {
+        console.error("Eroare la logarea nativă:", error);
+        alert("Autentificarea a eșuat sau a fost anulată.");
+    }
+}
 
 function handleCredentialResponse(response) {
     const responsePayload = decodeJwtResponse(response.credential);
@@ -85,11 +123,16 @@ function handleCredentialResponse(response) {
     } else {
         alert("Eroare de acces: Te rugăm să folosești exclusiv adresa de email @euroavia-bucuresti.ro!");
         
-        // Deconectăm forțat contul greșit pentru a-ți permite să alegi/adaugi altul!
-        google.accounts.id.disableAutoSelect();
-        google.accounts.id.revoke(emailUser, done => {
-            console.log("Sesiunea contului personal a fost ștearsă. Acum poți alege alt cont.");
-        });
+        // Deconectăm forțat contul greșit pentru a-ți permite să alegi altul
+        if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+            const { GoogleAuth } = window.Capacitor.Plugins;
+            GoogleAuth.signOut();
+        } else {
+            google.accounts.id.disableAutoSelect();
+            google.accounts.id.revoke(emailUser, done => {
+                console.log("Sesiunea contului personal a fost ștearsă.");
+            });
+        }
     }
 }
 

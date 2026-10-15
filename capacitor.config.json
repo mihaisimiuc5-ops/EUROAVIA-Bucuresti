@@ -1,5 +1,13 @@
 {
   "appId": "ro.euroaviabucuresti.app",
   "appName": "Euroavia Bucuresti",
-  "webDir": "www"
+  "webDir": "www",
+   "plugins": {
+    "GoogleAuth": {
+      "scopes": ["profile", "email"],
+      "serverClientId": "440151498628-lh87c1pfc7asgrohle857uls25jvnkvu.apps.googleusercontent.com",
+      "forceCodeForRefreshToken": true
+    }
+  }
 }
+
