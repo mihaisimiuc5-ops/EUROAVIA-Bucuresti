@@ -50,5 +50,6 @@ jobs:
           name: Aplicatia-Mea-APK
           path: android/app/build/outputs/apk/debug/app-debug.apk
 
-      - name: 9. Afiseaza amprenta SHA-1
-        run: keytool -printcert -jarfile android/app/build/outputs/apk/debug/app-debug.apk
+      - name: 9. Afiseaza amprenta SHA-1 (prin Gradle)
+        working-directory: ./android
+        run: ./gradlew signingReport
