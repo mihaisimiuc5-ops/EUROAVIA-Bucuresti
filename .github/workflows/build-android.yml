@@ -28,7 +28,7 @@ jobs:
           java-version: '21' # Aici am schimbat din 17 in 21
 
       - name: 4. Instalează pachetele NPM
-        run: npm install
+        run: run: npm install --legacy-peer-deps
 
       - name: 4.5. Fix pentru permisiuni Capacitor (Instalare globală)
         run: npm install -g @capacitor/cli
