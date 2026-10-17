@@ -231,9 +231,19 @@
                                 <p id="profilePageBio" style="color: #555; font-size: 14px; line-height: 1.6; margin: 0; white-space: pre-wrap;">Nu ai adăugat nicio descriere încă.</p>
                             </div>
                             
-                            <button class="action-btn" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px;" onclick="toggleProfileEditMode(true)">
+                            <!-- MUTAT SUS: Butonul de editare deasupra postărilor -->
+                            <button class="action-btn" style="width: 100%; margin-bottom: 25px; display: flex; align-items: center; justify-content: center; gap: 8px;" onclick="toggleProfileEditMode(true)">
                                 <i class="material-icons" style="font-size: 20px;">edit</i> Modifică Profilul
                             </button>
+
+                            <!-- Secțiunea pentru postările proprii -->
+                            <div style="text-align: left; margin-bottom: 10px;">
+                                <h4 style="color: #003366; margin-bottom: 15px; font-size: 13px; text-transform: uppercase; border-bottom: 1px solid #eee; padding-bottom: 5px;">Postările tale</h4>
+                                <div id="profilePostsList">
+                                    <p class="placeholder-text">Se încarcă postările...</p>
+                                </div>
+                            </div>
+                            
                         </div>
 
                         <!-- MODUL EDITARE (EDIT MODE) -->

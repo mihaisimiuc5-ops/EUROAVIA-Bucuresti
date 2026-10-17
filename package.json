@@ -1,6 +1,6 @@
 {
-  "name": "euroavia-app",
-  "version": "1.0.0",
+  "name": "euroavia-bucuresti-app",
+  "version": "0.8.0",
   "main": "app.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"

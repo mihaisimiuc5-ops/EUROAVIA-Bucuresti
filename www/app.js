@@ -6,7 +6,6 @@ let currentDept = '';
 let currentUserName = '';
 let currentUserGooglePic = 'icon-192.png';
 let profileCacheBuster = new Date().getTime(); 
-let isDeptFilterActive = false;
 
 const API_URL = 'https://app.euroavia-bucuresti.ro/api/server.php';
 let userSavedEvents = [];
@@ -16,6 +15,9 @@ let departmentMembersLoaded = false;
 let postsOffset = 0;
 let isFetchingPosts = false;
 let hasMorePosts = true;
+
+// Variabilă pentru filtrarea postărilor pe departament
+let isDeptFilterActive = false;
 
 // ==========================================
 // 2. LOGICA DE AUTENTIFICARE GOOGLE
@@ -192,7 +194,7 @@ function switchTab(tabId, title, element) {
     const addPostBtn = document.getElementById('addPostBtn');
     const filterPostsBtn = document.getElementById('filterPostsBtn');
     
-if (toggleBtn) toggleBtn.style.display = (tabId === 'tasks') ? 'block' : 'none';
+    if (toggleBtn) toggleBtn.style.display = (tabId === 'tasks') ? 'block' : 'none';
     if (addPostBtn) addPostBtn.style.display = (tabId === 'posts') ? 'flex' : 'none';
     if (filterPostsBtn) filterPostsBtn.style.display = (tabId === 'posts') ? 'flex' : 'none';
     
@@ -248,6 +250,9 @@ function openUserProfile() {
     }).catch(err => {
         document.getElementById('profilePageBio').innerText = 'Eroare la încărcarea datelor.';
     });
+
+    // Încărcăm postările proprii în profil
+    loadProfilePosts();
 }
 
 function toggleProfileEditMode(isEdit) {
@@ -911,7 +916,7 @@ function saveAndFetchLeaderboard(scoreToSave) {
 }
 
 // ==========================================
-// 9. FEED DE POSTĂRI (IMAGINI / VIDEO) - PAGINAT
+// 9. FEED DE POSTĂRI & COMENTARII
 // ==========================================
 let currentPostIdForComments = null;
 
@@ -921,17 +926,15 @@ function togglePostsFilter() {
     const icon = btn.querySelector('i');
     
     if (isDeptFilterActive) {
-        btn.style.backgroundColor = '#28a745'; // Verde pentru vizualizare departament
-        icon.innerText = 'groups'; // Schimbă iconița
+        btn.style.backgroundColor = '#28a745'; 
+        icon.innerText = 'groups'; 
     } else {
-        btn.style.backgroundColor = '#003366'; // Culoarea de bază
-        icon.innerText = 'public'; // Toată lumea
+        btn.style.backgroundColor = '#003366'; 
+        icon.innerText = 'public'; 
     }
     
-    // Reîncarcă postările aplicând filtrul
     loadPosts(true);
 }
-
 
 function loadPosts(reset = false) {
     if (isFetchingPosts || (!hasMorePosts && !reset)) return;
@@ -965,7 +968,7 @@ function loadPosts(reset = false) {
 
         if (data.success) {
             if (reset && data.posts.length === 0) {
-                container.innerHTML = '<p class="placeholder-text">Nu există postări încă. Apasă pe + pentru a adăuga prima postare!</p>';
+                container.innerHTML = '<p class="placeholder-text">Nu există postări încă. Fii primul care adaugă o postare!</p>';
                 hasMorePosts = false;
                 return;
             }
@@ -991,14 +994,21 @@ function loadPosts(reset = false) {
                 
                 const postDate = new Date(post.created_at).toLocaleString('ro-RO', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
 
+                const deleteBtnHtml = (post.member_id === currentMemberId) 
+                    ? `<button onclick="deletePost(${post.id})" style="background:transparent; border:none; color:#d9534f; cursor:pointer; padding:5px;"><i class="material-icons">delete_outline</i></button>` 
+                    : '';
+
                 const postHtml = `
                     <div class="post-card" id="post-${post.id}">
-                        <div class="post-header">
-                            <img src="${authorPic}" onerror="this.src='icon-192.png'">
-                            <div class="post-header-info">
-                                <h4>${post.author_name}</h4>
-                                <span>${postDate}</span>
+                        <div class="post-header" style="justify-content: space-between;">
+                            <div style="display:flex; align-items:center; gap:12px;">
+                                <img src="${authorPic}" onerror="this.src='icon-192.png'">
+                                <div class="post-header-info">
+                                    <h4>${post.author_name}</h4>
+                                    <span>${postDate}</span>
+                                </div>
                             </div>
+                            ${deleteBtnHtml}
                         </div>
                         ${post.description ? `<div class="post-text">${post.description}</div>` : ''}
                         ${mediaHtml}
@@ -1027,7 +1037,6 @@ function loadPosts(reset = false) {
     });
 }
 
-// Actualizează designul, arată PREVIZUALIZAREA și confirmă atașarea
 function updateFileName(input, labelId) {
     const label = document.getElementById(labelId);
     if (!label) return; 
@@ -1040,11 +1049,8 @@ function updateFileName(input, labelId) {
     
     if (input.files && input.files.length > 0) {
         const file = input.files[0];
-        
-        // Schimbăm butonul în VERDE pentru a confirma selecția
         label.style.backgroundColor = '#28a745'; 
         
-        // --- LOGICĂ DE PREVIZUALIZARE PENTRU POSTĂRI ---
         if (labelId === 'postMediaLabel') {
             const isHeic = file.type.includes('heic') || file.type.includes('heif') || file.name.toLowerCase().endsWith('.heic');
             
@@ -1060,10 +1066,10 @@ function updateFileName(input, labelId) {
                     }
                     if (videoPreview) videoPreview.style.display = 'none';
                     icon.innerText = 'check_circle';
-                    labelText.innerText = "Imagine atașată (Modifică)";
+                    labelText.innerText = "Imagine atașată";
                 }).catch(e => {
                     icon.innerText = 'warning';
-                    labelText.innerText = "Imagine atașată (Fără previzualizare)";
+                    labelText.innerText = "Imagine atașată (fără preview)";
                 });
             } 
             else if (file.type.startsWith('image/')) {
@@ -1073,7 +1079,7 @@ function updateFileName(input, labelId) {
                 }
                 if (videoPreview) videoPreview.style.display = 'none';
                 icon.innerText = 'check_circle';
-                labelText.innerText = "Imagine atașată (Modifică)";
+                labelText.innerText = "Imagine atașată";
             } 
             else if (file.type.startsWith('video/')) {
                 if (videoPreview) {
@@ -1082,17 +1088,15 @@ function updateFileName(input, labelId) {
                 }
                 if (imagePreview) imagePreview.style.display = 'none';
                 icon.innerText = 'check_circle';
-                labelText.innerText = "Video atașat (Modifică)";
+                labelText.innerText = "Video atașat";
             }
         } 
-        // --- LOGICĂ PENTRU POZA DE PROFIL ---
         else if (labelId === 'profileMediaLabel') {
              icon.innerText = 'check_circle';
-             labelText.innerText = "Poză atașată (Modifică)";
+             labelText.innerText = "Poză atașată";
         }
         
     } else {
-        // Dacă utilizatorul anulează, readucem butonul la starea GRI
         label.style.backgroundColor = '#666'; 
         if (labelId === 'profileMediaLabel') {
             labelText.innerText = 'Încarcă o poză nouă';
@@ -1112,17 +1116,14 @@ function closeAddPostModal() {
     document.getElementById('addPostModal').style.display = 'none'; 
     document.getElementById('postDescription').value = '';
     
-    // Resetăm fișierul stocat
     const fileInput = document.getElementById('postMedia');
     fileInput.value = '';
     
-    // Ștergem previzualizarea la închiderea ferestrei
     const imagePreview = document.getElementById('postImagePreview');
     const videoPreview = document.getElementById('postVideoPreview');
     if (imagePreview) { imagePreview.src = ''; imagePreview.style.display = 'none'; }
     if (videoPreview) { videoPreview.src = ''; videoPreview.style.display = 'none'; }
     
-    // Readucem butonul de upload la starea inițială
     if(typeof updateFileName === 'function') updateFileName(fileInput, 'postMediaLabel');
 
     document.getElementById('btnSubmitPost').innerText = 'Postează';
@@ -1160,10 +1161,10 @@ async function compressImageForPost(file) {
                     reject("Eroare memorie Canvas: " + e.message);
                 }
             };
-            img.onerror = () => reject("Browserul nu poate citi acest format de imagine (posibil format HEIC, SVG complex sau fișier corupt).");
+            img.onerror = () => reject("Eroare de procesare a imaginii.");
             img.src = event.target.result;
         };
-        reader.onerror = () => reject("Eroare la citirea fișierului de pe disc.");
+        reader.onerror = () => reject("Eroare la citirea fișierului.");
     });
 }
 
@@ -1190,7 +1191,7 @@ async function submitPost() {
                     const convertedBlob = await heic2any({ blob: file, toType: "image/jpeg", quality: 0.8 });
                     file = Array.isArray(convertedBlob) ? convertedBlob[0] : convertedBlob;
                 } catch (conversionError) {
-                    throw new Error("Nu am putut converti imaginea HEIC de pe iPhone. Te rugăm să încerci altă poză.");
+                    throw new Error("Nu am putut converti imaginea HEIC de pe iPhone.");
                 }
             }
 
@@ -1209,7 +1210,7 @@ async function submitPost() {
                     reader.readAsDataURL(file);
                 });
             } else {
-                throw new Error("Format nesuportat. Alege o imagine sau un video valid.");
+                throw new Error("Format nesuportat. Alege o imagine sau un video.");
             }
         }
 
@@ -1218,13 +1219,14 @@ async function submitPost() {
             body: JSON.stringify({ action: 'create_post', member_id: currentMemberId, description: desc, media: mediaBase64, media_type: mediaType })
         })
         .then(async res => {
-            if (!res.ok) throw new Error("Serverul a refuzat cererea (Cod: " + res.status + "). Posibil limită de mărime depășită.");
+            if (!res.ok) throw new Error("Eroare de server.");
             return res.json();
         })
         .then(data => {
             if (data.success) { 
                 closeAddPostModal(); 
                 loadPosts(true); 
+                loadProfilePosts(); // Reîncărcăm postările și în profil
             } else { 
                 alert('Eroare Bază de Date: ' + data.message); 
                 btnSubmit.innerText = 'Postează'; btnSubmit.disabled = false; 
@@ -1281,12 +1283,19 @@ function fetchComments(postId) {
             if (data.comments.length === 0) list.innerHTML = '<p class="placeholder-text" style="text-align:center;">Fii primul care comentează!</p>';
             data.comments.forEach(c => {
                 const pic = `${API_URL}?action=get_profile_pic&member_id=${c.member_id}&t=${profileCacheBuster}`;
+                
+                const deleteCommentBtn = (c.member_id === currentMemberId) 
+                    ? `<button onclick="deleteComment(${c.id}, ${postId})" style="background:transparent; border:none; color:#d9534f; cursor:pointer; padding:0; margin-left: 10px;"><i class="material-icons" style="font-size:16px;">delete</i></button>` : '';
+
                 list.innerHTML += `
                     <div class="comment-item">
                         <img src="${pic}" onerror="this.src='icon-192.png'">
                         <div class="comment-box">
-                            <h5>${c.author_name}</h5>
-                            <p>${c.comment}</p>
+                            <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                                <h5 style="margin: 0 0 5px 0;">${c.author_name}</h5>
+                                ${deleteCommentBtn}
+                            </div>
+                            <p style="margin: 0;">${c.comment}</p>
                         </div>
                     </div>`;
             });
@@ -1313,5 +1322,104 @@ function submitComment() {
                 if (countSpan) countSpan.innerText = parseInt(countSpan.innerText) + 1;
             }
         }
+    });
+}
+
+// ==========================================
+// 10. POSTĂRILE PROPRII (ZONA DE PROFIL) ȘI ȘTERGERE
+// ==========================================
+
+function loadProfilePosts() {
+    const container = document.getElementById('profilePostsList');
+    if (!container) return; // Protecție dacă div-ul nu a fost creat în index.html
+    
+    container.innerHTML = '<p class="placeholder-text">Se încarcă postările...</p>';
+    
+    fetch(`${API_URL}?action=get_posts&member_id=${currentMemberId}&target_member_id=${currentMemberId}&limit=50&offset=0`)
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            container.innerHTML = '';
+            if (data.posts.length === 0) {
+                container.innerHTML = '<p class="placeholder-text" style="text-align:left; font-size:13px;">Nu ai publicat nicio postare încă.</p>';
+                return;
+            }
+            
+            data.posts.forEach(post => {
+                const postDate = new Date(post.created_at).toLocaleString('ro-RO', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+                let mediaHtml = '';
+                
+                if (post.media_url) {
+                    const mediaSrc = `${API_URL}?action=get_post_media&file=${post.media_url}`;
+                    if (post.media_type === 'video') mediaHtml = `<video class="post-media" controls src="${mediaSrc}" style="max-height: 150px; margin-bottom:10px;"></video>`;
+                    else mediaHtml = `<img class="post-media" src="${mediaSrc}" alt="Media" style="max-height: 150px; margin-bottom:10px;">`;
+                }
+                
+                // Variabile pentru starea de LIKE
+                const isLiked = post.user_liked ? 'liked' : '';
+                const likeIcon = post.user_liked ? 'favorite' : 'favorite_border';
+                const likeColor = post.user_liked ? '#d9534f' : '#666';
+
+                const postHtml = `
+                    <div class="post-card" id="profile-post-${post.id}" style="padding: 12px; margin-bottom: 12px; box-shadow:none; border:1px solid #ddd;">
+                        <div class="post-header" style="justify-content: space-between; margin-bottom: 8px;">
+                            <span style="font-size: 11px; color:#777;">${postDate}</span>
+                            <button onclick="deletePost(${post.id})" style="background:none; border:none; color:#d9534f; cursor:pointer; padding:0;"><i class="material-icons" style="font-size: 18px;">delete_outline</i></button>
+                        </div>
+                        ${post.description ? `<div class="post-text" style="font-size: 13px; margin-bottom:8px;">${post.description}</div>` : ''}
+                        ${mediaHtml}
+                        <div class="post-actions" style="padding-top: 5px; border:none; justify-content:flex-start; gap:15px;">
+                            
+                            <!-- Buton interactiv LIKE (funcționează la fel ca în feed) -->
+                            <button class="post-action-btn ${isLiked}" onclick="toggleLike(${post.id}, this)" style="padding: 0; background: transparent; border: none; display: flex; align-items: center; gap: 3px; font-size: 12px; color: ${likeColor};">
+                                <i class="material-icons" style="font-size: 14px;">${likeIcon}</i> <span class="likes-count">${post.likes_count}</span>
+                            </button>
+
+                            <!-- Buton interactiv COMENTARII (deschide același modal) -->
+                            <button class="post-action-btn" onclick="openCommentsModal(${post.id})" style="padding: 0; background: transparent; border: none; display: flex; align-items: center; gap: 3px; font-size: 12px; color: #666;">
+                                <i class="material-icons" style="font-size: 14px;">chat_bubble_outline</i> <span class="comments-count">${post.comments_count}</span>
+                            </button>
+                            
+                        </div>
+                    </div>`;
+                container.insertAdjacentHTML('beforeend', postHtml);
+            });
+        } else { container.innerHTML = '<p class="placeholder-text">Eroare la încărcare.</p>'; }
+    });
+}
+
+function deletePost(postId) {
+    if (!confirm("Ești sigur că vrei să ștergi această postare definitiv?")) return;
+    fetch(API_URL, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'delete_post', member_id: currentMemberId, post_id: postId })
+    }).then(res => res.json()).then(data => {
+        if (data.success) {
+            const postCard = document.getElementById(`post-${postId}`);
+            if (postCard) postCard.remove();
+            
+            const profilePostCard = document.getElementById(`profile-post-${postId}`);
+            if (profilePostCard) profilePostCard.remove();
+        } else alert(data.message || "Eroare la ștergere.");
+    });
+}
+
+function deleteComment(commentId, postId) {
+    if (!confirm("Ești sigur că vrei să ștergi acest comentariu?")) return;
+    fetch(API_URL, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'delete_comment', member_id: currentMemberId, comment_id: commentId })
+    }).then(res => res.json()).then(data => {
+        if (data.success) {
+            fetchComments(postId); 
+            const postCard = document.getElementById(`post-${postId}`);
+            if (postCard) {
+                const countSpan = postCard.querySelector('.comments-count');
+                if (countSpan) {
+                    let newCount = parseInt(countSpan.innerText) - 1;
+                    countSpan.innerText = newCount >= 0 ? newCount : 0;
+                }
+            }
+        } else alert(data.message || "Eroare la ștergere.");
     });
 }
