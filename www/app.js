@@ -71,6 +71,16 @@ window.onload = async function () {
 
     // --- AUTENTIFICARE NOUĂ (CAPACITOR SAU WEB) ---
     if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+        
+        // Forțăm StatusBar-ul să fie albastru cu text alb nativ
+        try {
+            const { StatusBar } = window.Capacitor.Plugins;
+            if (StatusBar) {
+                StatusBar.setBackgroundColor({ color: '#003366' });
+                StatusBar.setStyle({ style: 'DARK' }); 
+            }
+        } catch (e) { console.warn("StatusBar error:", e); }
+
         btnWrapper.innerHTML = `
             <button onclick="nativeGoogleLogin()" style="width: 100%; padding: 12px; font-size: 16px; background: white; color: #555; border: 1px solid #ccc; border-radius: 4px; display: flex; align-items: center; justify-content: center; gap: 12px; font-family: Roboto, sans-serif; font-weight: 500; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.2);">
                 <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" width="20" alt="G Logo">
@@ -116,8 +126,20 @@ async function nativeGoogleLogin() {
             return;
         }
         const googleUser = await GoogleAuth.signIn();
-        const fakeResponseObj = { credential: googleUser.authentication.idToken };
-        handleCredentialResponse(fakeResponseObj);
+        
+        fetch(API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: 'verify_google_login',
+                token: googleUser.authentication.idToken,
+                google_pic: googleUser.imageUrl || ''
+            })
+        })
+        .then(response => response.json())
+        .then(handleServerLoginResponse)
+        .catch(error => { alert("Eroare de conexiune la server."); });
+
     } catch (error) {
         alert("Eroare la logare: " + (error.message || JSON.stringify(error)));
     }
@@ -125,68 +147,65 @@ async function nativeGoogleLogin() {
 
 function handleCredentialResponse(response) {
     const responsePayload = decodeJwtResponse(response.credential);
-    const emailUser = responsePayload.email;
-    const numeUser = responsePayload.name;
+    const googlePicUrl = responsePayload.picture || '';
 
-    if (emailUser.endsWith('@euroavia-bucuresti.ro')) {
-        currentUserGooglePic = responsePayload.picture || 'icon-192.png';
-        const googlePicUrl = responsePayload.picture || '';
-        const fetchUrl = `${API_URL}?action=get_user_info&email=${encodeURIComponent(emailUser)}&google_pic=${encodeURIComponent(googlePicUrl)}`;
-        
-        fetch(fetchUrl, { method: 'GET' })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                currentMemberId = data.id;
-                currentDept = data.departament;
-                currentUserName = data.nume_complet || numeUser;
-
-                // Salvăm sesiunea pentru a nu mai cere login data viitoare
-                const sessionData = {
-                    id: currentMemberId,
-                    departament: currentDept,
-                    nume_complet: currentUserName,
-                    pic: currentUserGooglePic,
-                    email: emailUser
-                };
-                localStorage.setItem('euroavia_session', JSON.stringify(sessionData));
-
-            } else {
-                currentMemberId = 1;
-                currentDept = 'Vizitator';
-                currentUserName = numeUser;
-            }
-
-            document.getElementById('loginScreen').style.display = 'none';
-            document.getElementById('mainApp').style.display = 'flex';
-            document.getElementById('menuUserName').innerText = currentUserName;
-            
-            const profileImg = document.getElementById('menuProfilePic');
-            profileImg.src = `${API_URL}?action=get_profile_pic&member_id=${currentMemberId}&t=${profileCacheBuster}`;
-            profileImg.onerror = function() {
-                this.onerror = null;
-                this.src = currentUserGooglePic;
-            };
-            
-            setupDynamicTabs();
-            loadDashboardData(); 
-
-            const firstTabBtn = document.querySelector('.bottom-nav .nav-item');
-            switchTab('tasks', 'Dashboard', firstTabBtn);
+    fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            action: 'verify_google_login',
+            token: response.credential, 
+            google_pic: googlePicUrl
         })
-        .catch(error => {
-            alert("Eroare de conexiune la preluarea datelor contului.");
-        });
-
-    } else {
-        alert("Eroare de acces: Te rugăm să folosești exclusiv adresa de email @euroavia-bucuresti.ro!");
-        if (window.Capacitor && window.Capacitor.isNativePlatform()) {
-            const { GoogleAuth } = window.Capacitor.Plugins;
-            if (GoogleAuth) GoogleAuth.signOut();
+    })
+    .then(res => res.json())
+    .then(data => {
+        if(data.success) {
+            data.emailUser = responsePayload.email;
+            data.googlePicUrl = googlePicUrl;
+            handleServerLoginResponse(data);
         } else {
+            alert("Eroare autentificare: " + data.message);
             google.accounts.id.disableAutoSelect();
-            google.accounts.id.revoke(emailUser, done => { });
         }
+    })
+    .catch(error => { alert("Eroare de conexiune la server."); });
+}
+
+function handleServerLoginResponse(data) {
+    if (data.success) {
+        currentMemberId = data.id;
+        currentDept = data.departament;
+        currentUserName = data.nume_complet;
+        currentUserGooglePic = data.googlePicUrl || 'icon-192.png';
+
+        const sessionData = {
+            id: currentMemberId,
+            departament: currentDept,
+            nume_complet: currentUserName,
+            pic: currentUserGooglePic,
+            email: data.emailUser
+        };
+        localStorage.setItem('euroavia_session', JSON.stringify(sessionData));
+
+        document.getElementById('loginScreen').style.display = 'none';
+        document.getElementById('mainApp').style.display = 'flex';
+        document.getElementById('menuUserName').innerText = currentUserName;
+        
+        const profileImg = document.getElementById('menuProfilePic');
+        profileImg.src = `${API_URL}?action=get_profile_pic&member_id=${currentMemberId}&t=${profileCacheBuster}`;
+        profileImg.onerror = function() {
+            this.onerror = null;
+            this.src = currentUserGooglePic;
+        };
+        
+        setupDynamicTabs();
+        loadDashboardData(); 
+
+        const firstTabBtn = document.querySelector('.bottom-nav .nav-item');
+        switchTab('tasks', 'Dashboard', firstTabBtn);
+    } else {
+        alert("Eroare la logare: " + data.message);
     }
 }
 
@@ -952,7 +971,7 @@ function saveAndFetchLeaderboard(scoreToSave) {
         if(data.success && data.leaderboard.length > 0) {
             lbContainer.innerHTML = '';
             data.leaderboard.forEach((p, index) => {
-                let medal = index === 0 ? '' : index === 1 ? '' : index === 2 ? '' : '';
+                let medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '🔹';
                 lbContainer.innerHTML += `<li class="leaderboard-item"><span>${medal} ${p.nume} ${p.prenume}</span><b>${p.max_score} pct</b></li>`;
             });
         } else lbContainer.innerHTML = '<p class="placeholder-text">Nu există scoruri încă.</p>';
@@ -1568,6 +1587,14 @@ function logoutUser() {
             const { GoogleAuth } = window.Capacitor.Plugins;
             if (GoogleAuth) GoogleAuth.signOut();
         } catch (err) { console.warn("GoogleAuth signOut error:", err); }
+
+        try {
+            const { StatusBar } = window.Capacitor.Plugins;
+            if (StatusBar) {
+                StatusBar.setBackgroundColor({ color: '#003366' });
+                StatusBar.setStyle({ style: 'DARK' }); 
+            }
+        } catch (e) { console.warn("StatusBar error:", e); }
     }
     
     window.location.reload();
