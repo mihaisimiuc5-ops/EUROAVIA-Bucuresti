@@ -63,9 +63,9 @@ window.onload = async function () {
             const firstTabBtn = document.querySelector('.bottom-nav .nav-item');
             switchTab('tasks', 'Dashboard', firstTabBtn);
             
-            return; // Oprim execuția aici, nu mai randăm butoanele Google
+            return; // Oprim execuția aici
         } catch (e) {
-            localStorage.removeItem('euroavia_session'); // Dacă datele sunt corupte, le ștergem
+            localStorage.removeItem('euroavia_session');
         }
     }
 
@@ -282,7 +282,7 @@ function openUserProfile() {
         this.src = currentUserGooglePic; 
     };
 
-    document.getElementById('profilePageBio').innerHTML = '<i>Se încarcă...</i>';
+    document.getElementById('profilePageBio').innerHTML = '<div class="loading-spinner loading-spinner-small" style="margin: 0;"></div>';
     fetch(`${API_URL}?action=get_user_profile&member_id=${currentMemberId}`)
     .then(res => res.json())
     .then(data => {
@@ -477,7 +477,7 @@ function renderSavedEventsOrForm() {
                         <i class="material-icons expand-icon">expand_more</i>
                     </div>
                     <div class="event-details-content" style="display: none;">
-                        <p class="placeholder-text" style="text-align:left; margin:0;">Se încarcă detaliile...</p>
+                        <div class="loading-spinner loading-spinner-small"></div>
                     </div>
                 </div>`;
         });
@@ -866,10 +866,10 @@ function startQuizTimer() {
     clearInterval(quizTimer);
     quizTimer = setInterval(() => {
         timeElapsed++;
-        let percentage = ((30 - timeElapsed) / 30) * 100;
+        let percentage = ((10 - timeElapsed) / 10) * 100;
         timerBar.style.width = percentage + '%';
         if(percentage < 40) timerBar.style.backgroundColor = '#d9534f'; 
-        if (timeElapsed >= 30) { clearInterval(quizTimer); selectQuizAnswer(-1, null); }
+        if (timeElapsed >= 10) { clearInterval(quizTimer); selectQuizAnswer(-1, null); }
     }, 1000);
 }
 
@@ -879,7 +879,7 @@ function selectQuizAnswer(selectedIndex, clickedBtn) {
     const allBtns = document.querySelectorAll('.quiz-btn');
     allBtns.forEach(b => b.disabled = true);
 
-    let bonus = 5 - Math.floor(timeElapsed / 6);
+    let bonus = 5 - Math.floor(timeElapsed / 2);
     if (bonus < 0) bonus = 0;
 
     if (selectedIndex === qData.answer) {
@@ -941,7 +941,7 @@ function endQuiz() {
 
 function saveAndFetchLeaderboard(scoreToSave) {
     const lbContainer = document.getElementById('quizLeaderboard');
-    lbContainer.innerHTML = '<p class="placeholder-text">Se salvează și se încarcă clasamentul...</p>';
+    lbContainer.innerHTML = '<div class="loading-spinner"></div>';
 
     fetch(API_URL, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -952,7 +952,7 @@ function saveAndFetchLeaderboard(scoreToSave) {
         if(data.success && data.leaderboard.length > 0) {
             lbContainer.innerHTML = '';
             data.leaderboard.forEach((p, index) => {
-                let medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '🔹';
+                let medal = index === 0 ? '' : index === 1 ? '' : index === 2 ? '' : '';
                 lbContainer.innerHTML += `<li class="leaderboard-item"><span>${medal} ${p.nume} ${p.prenume}</span><b>${p.max_score} pct</b></li>`;
             });
         } else lbContainer.innerHTML = '<p class="placeholder-text">Nu există scoruri încă.</p>';
@@ -990,10 +990,10 @@ function loadPosts(reset = false) {
         postsOffset = 0;
         hasMorePosts = true;
         limit = 10; 
-        container.innerHTML = '<p class="placeholder-text" id="loadingPostsText">Se încarcă postările...</p>';
+        container.innerHTML = '<div class="loading-spinner" id="loadingPostsText"></div>';
     } else {
         if (!document.getElementById('loadingMorePostsText')) {
-            container.insertAdjacentHTML('beforeend', '<p class="placeholder-text" id="loadingMorePostsText" style="padding:10px;">Se încarcă mai multe...</p>');
+            container.insertAdjacentHTML('beforeend', '<div class="loading-spinner loading-spinner-small" id="loadingMorePostsText"></div>');
         }
     }
 
@@ -1311,7 +1311,7 @@ function toggleLike(postId, btnEl) {
 function openCommentsModal(postId) {
     currentPostIdForComments = postId;
     document.getElementById('commentsModal').style.display = 'flex';
-    document.getElementById('commentsList').innerHTML = '<p class="placeholder-text">Se încarcă...</p>';
+    document.getElementById('commentsList').innerHTML = '<div class="loading-spinner"></div>';
     fetchComments(postId);
 }
 
@@ -1376,7 +1376,7 @@ function loadProfilePosts() {
     const container = document.getElementById('profilePostsList');
     if (!container) return; 
     
-    container.innerHTML = '<p class="placeholder-text">Se încarcă postările...</p>';
+    container.innerHTML = '<div class="loading-spinner"></div>';
     
     fetch(`${API_URL}?action=get_posts&member_id=${currentMemberId}&target_member_id=${currentMemberId}&limit=50&offset=0`)
     .then(res => res.json())
@@ -1437,6 +1437,9 @@ function deletePost(postId) {
             
             const profilePostCard = document.getElementById(`profile-post-${postId}`);
             if (profilePostCard) profilePostCard.remove();
+            
+            const extPostCard = document.getElementById(`ext-post-${postId}`);
+            if (extPostCard) extPostCard.remove();
         } else alert(data.message || "Eroare la ștergere.");
     });
 }
@@ -1467,7 +1470,6 @@ function deleteComment(commentId, postId) {
 function openUserProfileModal(targetMemberId) {
     if (!targetMemberId) return;
     
-    // Dacă ai dat click pe tine însuți, te trimite la propriul profil editabil
     if (targetMemberId == currentMemberId) {
         openUserProfile();
         closeCommentsModal();
@@ -1477,7 +1479,7 @@ function openUserProfileModal(targetMemberId) {
     document.getElementById('userProfileModal').style.display = 'flex';
     document.getElementById('extProfileName').innerText = 'Se încarcă...';
     document.getElementById('extProfileDept').innerText = '...';
-    document.getElementById('extProfileBio').innerHTML = '<i>Se încarcă...</i>';
+    document.getElementById('extProfileBio').innerHTML = '<div class="loading-spinner loading-spinner-small" style="margin: 0;"></div>';
     
     const img = document.getElementById('extProfileImg');
     img.src = `${API_URL}?action=get_profile_pic&member_id=${targetMemberId}&t=${profileCacheBuster}`;
@@ -1495,20 +1497,72 @@ function openUserProfileModal(targetMemberId) {
             document.getElementById('extProfileName').innerText = 'Utilizator negăsit';
         }
     });
+
+    loadExternalProfilePosts(targetMemberId);
 }
 
 function closeUserProfileModal() {
     document.getElementById('userProfileModal').style.display = 'none';
 }
 
+function loadExternalProfilePosts(targetId) {
+    const container = document.getElementById('extProfilePostsList');
+    if (!container) return; 
+    
+    container.innerHTML = '<div class="loading-spinner"></div>';
+    
+    fetch(`${API_URL}?action=get_posts&member_id=${currentMemberId}&target_member_id=${targetId}&limit=50&offset=0`)
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            container.innerHTML = '';
+            if (data.posts.length === 0) {
+                container.innerHTML = '<p class="placeholder-text" style="text-align:left; font-size:13px;">Acest utilizator nu a publicat nicio postare încă.</p>';
+                return;
+            }
+            
+            data.posts.forEach(post => {
+                const postDate = new Date(post.created_at).toLocaleString('ro-RO', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+                let mediaHtml = '';
+                
+                if (post.media_url) {
+                    const mediaSrc = `${API_URL}?action=get_post_media&file=${post.media_url}`;
+                    if (post.media_type === 'video') mediaHtml = `<video class="post-media" controls src="${mediaSrc}" style="max-height: 150px; margin-bottom:10px;"></video>`;
+                    else mediaHtml = `<img class="post-media" src="${mediaSrc}" alt="Media" style="max-height: 150px; margin-bottom:10px;">`;
+                }
+                
+                const isLiked = post.user_liked ? 'liked' : '';
+                const likeIcon = post.user_liked ? 'favorite' : 'favorite_border';
+                const likeColor = post.user_liked ? '#d9534f' : '#666';
+
+                const postHtml = `
+                    <div class="post-card" id="ext-post-${post.id}" style="padding: 12px; margin-bottom: 12px; box-shadow:none; border:1px solid #ddd; text-align: left;">
+                        <div class="post-header" style="justify-content: space-between; margin-bottom: 8px;">
+                            <span style="font-size: 11px; color:#777;">${postDate}</span>
+                        </div>
+                        ${post.description ? `<div class="post-text" style="font-size: 13px; margin-bottom:8px;">${post.description}</div>` : ''}
+                        ${mediaHtml}
+                        <div class="post-actions" style="padding-top: 5px; border:none; justify-content:flex-start; gap:15px;">
+                            <button class="post-action-btn ${isLiked}" onclick="toggleLike(${post.id}, this)" style="padding: 0; background: transparent; border: none; display: flex; align-items: center; gap: 3px; font-size: 12px; color: ${likeColor};">
+                                <i class="material-icons" style="font-size: 14px;">${likeIcon}</i> <span class="likes-count">${post.likes_count}</span>
+                            </button>
+                            <button class="post-action-btn" onclick="openCommentsModal(${post.id})" style="padding: 0; background: transparent; border: none; display: flex; align-items: center; gap: 3px; font-size: 12px; color: #666;">
+                                <i class="material-icons" style="font-size: 14px;">chat_bubble_outline</i> <span class="comments-count">${post.comments_count}</span>
+                            </button>
+                        </div>
+                    </div>`;
+                container.insertAdjacentHTML('beforeend', postHtml);
+            });
+        } else { container.innerHTML = '<p class="placeholder-text">Eroare la încărcare.</p>'; }
+    });
+}
+
 // ==========================================
 // 12. LOGICĂ DECONECTARE
 // ==========================================
 function logoutUser() {
-    // Ștergem sesiunea salvată
     localStorage.removeItem('euroavia_session');
     
-    // Dacă e pe mobil cu Capacitor, deconectăm din plugin
     if (window.Capacitor && window.Capacitor.isNativePlatform()) {
         try {
             const { GoogleAuth } = window.Capacitor.Plugins;
@@ -1516,6 +1570,5 @@ function logoutUser() {
         } catch (err) { console.warn("GoogleAuth signOut error:", err); }
     }
     
-    // Reîncărcăm aplicația de la zero pentru a reseta variabilele și a arăta ecranul de login
     window.location.reload();
 }

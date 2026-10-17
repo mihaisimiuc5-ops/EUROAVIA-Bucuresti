@@ -46,6 +46,34 @@ body, html { background-color: #f4f7f6; color: #333; height: 100vh; height: 100d
     justify-content: flex-start; 
 }
 
+.login-logo-wrapper {
+    position: absolute;
+    top: 50px; /* Distanța față de marginea de sus */
+    left: 0;
+    width: 100%;
+    display: flex;
+    justify-content: center; /* Centrează perfect orizontal */
+    z-index: 3; /* Îl pune deasupra overlay-ului */
+}
+
+/* Dimensiunea logo-ului */
+.login-logo {
+    max-width: 180px; /* Poți ajusta mărimea logo-ului de aici */
+    height: auto;
+}
+
+/* Animații Slide-Up & Fade-In (Opacitate 0 -> 1) */
+@keyframes slideUpFade {
+    0% { opacity: 0; transform: translateY(50px); }
+    100% { opacity: 1; transform: translateY(0); }
+}
+
+/* Clasele de control al animației în cascadă */
+.anim-slide-up { 
+    opacity: 0; 
+    animation: slideUpFade 0.9s cubic-bezier(0.16, 1, 0.3, 1) forwards; 
+}
+
 /* Animații Slide-Up & Fade-In (Opacitate 0 -> 1) */
 @keyframes slideUpFade {
     0% { opacity: 0; transform: translateY(50px); }
@@ -57,9 +85,10 @@ body, html { background-color: #f4f7f6; color: #333; height: 100vh; height: 100d
     opacity: 0; /* Pornește invizibil */
     animation: slideUpFade 0.9s cubic-bezier(0.16, 1, 0.3, 1) forwards; 
 }
-.delay-1 { animation-delay: 0.2s; } /* Intră "BINE AI" */
-.delay-2 { animation-delay: 0.5s; } /* Intră "VENIT" */
-.delay-3 { animation-delay: 0.9s; } /* Intră Butonul */
+.delay-1 { animation-delay: 0.2s; } /* Intră Logo-ul */
+.delay-2 { animation-delay: 0.5s; } /* Intră "BINE AI" */
+.delay-3 { animation-delay: 0.9s; } /* Intră "VENIT" */
+.delay-4 { animation-delay: 1.3s; } /* Intră Butonul Google */
 
 /* --- STRUCTURA APP SHELL & HEADER --- */
 #mainApp { display: flex; flex-direction: column; height: 100vh; height: 100dvh; }
@@ -198,3 +227,27 @@ body, html { background-color: #f4f7f6; color: #333; height: 100vh; height: 100d
 .file-upload-label.has-file { background-color: #e8f5e9; border-color: #28a745; border-style: solid; }
 .file-upload-label.has-file i { color: #28a745; }
 .file-upload-label.has-file span { color: #155724; }
+
+/* --- SPINNER DE ÎNCĂRCARE (SEMI-CERC) --- */
+.loading-spinner {
+    width: 36px;
+    height: 36px;
+    border: 4px solid rgba(0, 51, 102, 0.15); /* Culoarea ștearsă a cercului de bază */
+    border-top: 4px solid #003366; /* Culoarea plină care se rotește */
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 20px auto;
+}
+
+/* Versiune mai mică pentru butoane sau liste înguste */
+.loading-spinner-small {
+    width: 22px;
+    height: 22px;
+    border-width: 3px;
+    margin: 10px auto;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
