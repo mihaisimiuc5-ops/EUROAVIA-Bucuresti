@@ -20,7 +20,7 @@ let hasMorePosts = true;
 let isDeptFilterActive = false;
 
 // ==========================================
-// 2. LOGICA DE AUTENTIFICARE GOOGLE
+// 2. LOGICA DE AUTENTIFICARE GOOGLE & AUTO-LOGIN
 // ==========================================
 window.onload = async function () {
     const btnWrapper = document.getElementById("googleButton");
@@ -37,6 +37,39 @@ window.onload = async function () {
         });
     }
 
+    // --- VERIFICARE SESIUNE SALVATĂ (AUTO-LOGIN) ---
+    const savedSession = localStorage.getItem('euroavia_session');
+    if (savedSession) {
+        try {
+            const data = JSON.parse(savedSession);
+            currentMemberId = data.id;
+            currentDept = data.departament;
+            currentUserName = data.nume_complet;
+            currentUserGooglePic = data.pic;
+
+            // Ascundem ecranul de login și arătăm aplicația
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('mainApp').style.display = 'flex';
+            document.getElementById('menuUserName').innerText = currentUserName;
+
+            // Setăm poza de profil
+            const profileImg = document.getElementById('menuProfilePic');
+            profileImg.src = `${API_URL}?action=get_profile_pic&member_id=${currentMemberId}&t=${profileCacheBuster}`;
+            profileImg.onerror = function() { this.onerror = null; this.src = currentUserGooglePic; };
+
+            setupDynamicTabs();
+            loadDashboardData(); 
+
+            const firstTabBtn = document.querySelector('.bottom-nav .nav-item');
+            switchTab('tasks', 'Dashboard', firstTabBtn);
+            
+            return; // Oprim execuția aici, nu mai randăm butoanele Google
+        } catch (e) {
+            localStorage.removeItem('euroavia_session'); // Dacă datele sunt corupte, le ștergem
+        }
+    }
+
+    // --- AUTENTIFICARE NOUĂ (CAPACITOR SAU WEB) ---
     if (window.Capacitor && window.Capacitor.isNativePlatform()) {
         btnWrapper.innerHTML = `
             <button onclick="nativeGoogleLogin()" style="width: 100%; padding: 12px; font-size: 16px; background: white; color: #555; border: 1px solid #ccc; border-radius: 4px; display: flex; align-items: center; justify-content: center; gap: 12px; font-family: Roboto, sans-serif; font-weight: 500; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.2);">
@@ -107,6 +140,17 @@ function handleCredentialResponse(response) {
                 currentMemberId = data.id;
                 currentDept = data.departament;
                 currentUserName = data.nume_complet || numeUser;
+
+                // Salvăm sesiunea pentru a nu mai cere login data viitoare
+                const sessionData = {
+                    id: currentMemberId,
+                    departament: currentDept,
+                    nume_complet: currentUserName,
+                    pic: currentUserGooglePic,
+                    email: emailUser
+                };
+                localStorage.setItem('euroavia_session', JSON.stringify(sessionData));
+
             } else {
                 currentMemberId = 1;
                 currentDept = 'Vizitator';
@@ -606,21 +650,21 @@ function renderLeaders(sup, coord, container) {
     if(sup) {
         const nume = sup.nume ? `${sup.nume} ${sup.prenume}` : sup.email;
         html += `
-            <div class="leader-card supervisor-card">
+            <div class="leader-card supervisor-card" ${sup.id ? `onclick="openUserProfileModal(${sup.id})" style="cursor:pointer;"` : ''}>
                 <div class="leader-badge">Supervizor</div>
                 <h3>${nume}</h3>
-                <p><i class="material-icons">email</i> <a href="mailto:${sup.email}" style="color:#555; text-decoration:none;">${sup.email}</a></p>
-                ${sup.telefon ? `<p><i class="material-icons">phone</i> <a href="tel:${sup.telefon}" style="color:#555; text-decoration:none;">${sup.telefon}</a></p>` : ''}
+                <p><i class="material-icons">email</i> <a href="mailto:${sup.email}" style="color:#555; text-decoration:none;" onclick="event.stopPropagation();">${sup.email}</a></p>
+                ${sup.telefon ? `<p><i class="material-icons">phone</i> <a href="tel:${sup.telefon}" style="color:#555; text-decoration:none;" onclick="event.stopPropagation();">${sup.telefon}</a></p>` : ''}
             </div>`;
     }
     if(coord) {
         const nume = coord.nume ? `${coord.nume} ${coord.prenume}` : coord.email;
         html += `
-            <div class="leader-card coordinator-card">
+            <div class="leader-card coordinator-card" ${coord.id ? `onclick="openUserProfileModal(${coord.id})" style="cursor:pointer;"` : ''}>
                 <div class="leader-badge">Coordonator</div>
                 <h3>${nume}</h3>
-                <p><i class="material-icons">email</i> <a href="mailto:${coord.email}" style="color:#555; text-decoration:none;">${coord.email}</a></p>
-                ${coord.telefon ? `<p><i class="material-icons">phone</i> <a href="tel:${coord.telefon}" style="color:#555; text-decoration:none;">${coord.telefon}</a></p>` : ''}
+                <p><i class="material-icons">email</i> <a href="mailto:${coord.email}" style="color:#555; text-decoration:none;" onclick="event.stopPropagation();">${coord.email}</a></p>
+                ${coord.telefon ? `<p><i class="material-icons">phone</i> <a href="tel:${coord.telefon}" style="color:#555; text-decoration:none;" onclick="event.stopPropagation();">${coord.telefon}</a></p>` : ''}
             </div>`;
     }
     if(!sup && !coord) html = '<p class="placeholder-text">Nu au fost setați lideri pentru acest departament.</p>';
@@ -640,7 +684,7 @@ function renderMembersList(membri, container) {
         const picUrl = `${API_URL}?action=get_profile_pic&member_id=${m.id}&t=${profileCacheBuster}`;
         
         html += `
-            <div class="member-item">
+            <div class="member-item" onclick="openUserProfileModal(${m.id})" style="cursor:pointer; transition: 0.2s;">
                 <img src="${picUrl}" alt="${initialaNume}${initialaPrenume}" 
                      style="width: 38px; height: 38px; border-radius: 50%; object-fit: cover; border: 1px solid #003366;" 
                      onerror="this.onerror=null; this.outerHTML='<div class=\\'member-avatar\\'>${initialaNume}${initialaPrenume}</div>';">
@@ -1001,10 +1045,10 @@ function loadPosts(reset = false) {
                 const postHtml = `
                     <div class="post-card" id="post-${post.id}">
                         <div class="post-header" style="justify-content: space-between;">
-                            <div style="display:flex; align-items:center; gap:12px;">
+                            <div style="display:flex; align-items:center; gap:12px; cursor:pointer;" onclick="openUserProfileModal(${post.member_id})">
                                 <img src="${authorPic}" onerror="this.src='icon-192.png'">
                                 <div class="post-header-info">
-                                    <h4>${post.author_name}</h4>
+                                    <h4 style="margin: 0; font-size: 16px; color: #111;">${post.author_name}</h4>
                                     <span>${postDate}</span>
                                 </div>
                             </div>
@@ -1226,7 +1270,7 @@ async function submitPost() {
             if (data.success) { 
                 closeAddPostModal(); 
                 loadPosts(true); 
-                loadProfilePosts(); // Reîncărcăm postările și în profil
+                loadProfilePosts(); 
             } else { 
                 alert('Eroare Bază de Date: ' + data.message); 
                 btnSubmit.innerText = 'Postează'; btnSubmit.disabled = false; 
@@ -1289,10 +1333,10 @@ function fetchComments(postId) {
 
                 list.innerHTML += `
                     <div class="comment-item">
-                        <img src="${pic}" onerror="this.src='icon-192.png'">
+                        <img src="${pic}" onerror="this.src='icon-192.png'" style="cursor:pointer;" onclick="openUserProfileModal(${c.member_id})">
                         <div class="comment-box">
                             <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-                                <h5 style="margin: 0 0 5px 0;">${c.author_name}</h5>
+                                <h5 style="margin: 0 0 5px 0; cursor:pointer; color:#003366;" onclick="openUserProfileModal(${c.member_id})">${c.author_name}</h5>
                                 ${deleteCommentBtn}
                             </div>
                             <p style="margin: 0;">${c.comment}</p>
@@ -1328,10 +1372,9 @@ function submitComment() {
 // ==========================================
 // 10. POSTĂRILE PROPRII (ZONA DE PROFIL) ȘI ȘTERGERE
 // ==========================================
-
 function loadProfilePosts() {
     const container = document.getElementById('profilePostsList');
-    if (!container) return; // Protecție dacă div-ul nu a fost creat în index.html
+    if (!container) return; 
     
     container.innerHTML = '<p class="placeholder-text">Se încarcă postările...</p>';
     
@@ -1355,7 +1398,6 @@ function loadProfilePosts() {
                     else mediaHtml = `<img class="post-media" src="${mediaSrc}" alt="Media" style="max-height: 150px; margin-bottom:10px;">`;
                 }
                 
-                // Variabile pentru starea de LIKE
                 const isLiked = post.user_liked ? 'liked' : '';
                 const likeIcon = post.user_liked ? 'favorite' : 'favorite_border';
                 const likeColor = post.user_liked ? '#d9534f' : '#666';
@@ -1369,17 +1411,12 @@ function loadProfilePosts() {
                         ${post.description ? `<div class="post-text" style="font-size: 13px; margin-bottom:8px;">${post.description}</div>` : ''}
                         ${mediaHtml}
                         <div class="post-actions" style="padding-top: 5px; border:none; justify-content:flex-start; gap:15px;">
-                            
-                            <!-- Buton interactiv LIKE (funcționează la fel ca în feed) -->
                             <button class="post-action-btn ${isLiked}" onclick="toggleLike(${post.id}, this)" style="padding: 0; background: transparent; border: none; display: flex; align-items: center; gap: 3px; font-size: 12px; color: ${likeColor};">
                                 <i class="material-icons" style="font-size: 14px;">${likeIcon}</i> <span class="likes-count">${post.likes_count}</span>
                             </button>
-
-                            <!-- Buton interactiv COMENTARII (deschide același modal) -->
                             <button class="post-action-btn" onclick="openCommentsModal(${post.id})" style="padding: 0; background: transparent; border: none; display: flex; align-items: center; gap: 3px; font-size: 12px; color: #666;">
                                 <i class="material-icons" style="font-size: 14px;">chat_bubble_outline</i> <span class="comments-count">${post.comments_count}</span>
                             </button>
-                            
                         </div>
                     </div>`;
                 container.insertAdjacentHTML('beforeend', postHtml);
@@ -1422,4 +1459,63 @@ function deleteComment(commentId, postId) {
             }
         } else alert(data.message || "Eroare la ștergere.");
     });
+}
+
+// ==========================================
+// 11. VIZUALIZARE PROFIL EXTERN
+// ==========================================
+function openUserProfileModal(targetMemberId) {
+    if (!targetMemberId) return;
+    
+    // Dacă ai dat click pe tine însuți, te trimite la propriul profil editabil
+    if (targetMemberId == currentMemberId) {
+        openUserProfile();
+        closeCommentsModal();
+        return;
+    }
+    
+    document.getElementById('userProfileModal').style.display = 'flex';
+    document.getElementById('extProfileName').innerText = 'Se încarcă...';
+    document.getElementById('extProfileDept').innerText = '...';
+    document.getElementById('extProfileBio').innerHTML = '<i>Se încarcă...</i>';
+    
+    const img = document.getElementById('extProfileImg');
+    img.src = `${API_URL}?action=get_profile_pic&member_id=${targetMemberId}&t=${profileCacheBuster}`;
+    img.onerror = function() { this.onerror=null; this.src='icon-192.png'; };
+    
+    fetch(`${API_URL}?action=get_user_profile&member_id=${targetMemberId}`)
+    .then(res => res.json())
+    .then(data => {
+        if(data.success) {
+            document.getElementById('extProfileName').innerText = data.nume_complet;
+            document.getElementById('extProfileDept').innerText = data.departament;
+            const bioText = data.bio || '';
+            document.getElementById('extProfileBio').innerText = bioText.trim() !== '' ? bioText : 'Nu a adăugat nicio descriere încă.';
+        } else {
+            document.getElementById('extProfileName').innerText = 'Utilizator negăsit';
+        }
+    });
+}
+
+function closeUserProfileModal() {
+    document.getElementById('userProfileModal').style.display = 'none';
+}
+
+// ==========================================
+// 12. LOGICĂ DECONECTARE
+// ==========================================
+function logoutUser() {
+    // Ștergem sesiunea salvată
+    localStorage.removeItem('euroavia_session');
+    
+    // Dacă e pe mobil cu Capacitor, deconectăm din plugin
+    if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+        try {
+            const { GoogleAuth } = window.Capacitor.Plugins;
+            if (GoogleAuth) GoogleAuth.signOut();
+        } catch (err) { console.warn("GoogleAuth signOut error:", err); }
+    }
+    
+    // Reîncărcăm aplicația de la zero pentru a reseta variabilele și a arăta ecranul de login
+    window.location.reload();
 }
