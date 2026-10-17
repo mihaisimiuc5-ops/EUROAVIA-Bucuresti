@@ -243,13 +243,11 @@
                             <form id="profileForm" onsubmit="saveUserProfile(event)">
                                 <div class="event-form-group">
                                     <p>Schimbă poza de profil:</p>
-                                    <div class="custom-file-upload">
-                                        <input type="file" id="profileImageInput" accept="image/*" style="display: none;" onchange="updateFileName(this, 'profileMediaLabel')">
-                                        <label for="profileImageInput" id="profileMediaLabel" class="file-upload-label" style="padding: 15px;">
-                                            <i class="material-icons">add_a_photo</i> 
-                                            <span>Alege o poză nouă...</span>
-                                        </label>
-                                    </div>
+                                    <input type="file" id="profileImageInput" accept="image/*" style="display: none;" onchange="updateFileName(this, 'profileMediaLabel')">
+                                    <label for="profileImageInput" id="profileMediaLabel" class="action-btn" style="width: 100%; background-color: #666; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                                        <i class="material-icons">add_a_photo</i> 
+                                        <span>Încarcă o poză nouă</span>
+                                    </label>
                                 </div>
 
                                 <div class="event-form-group" style="margin-top: 15px;">
@@ -299,6 +297,9 @@
                                         <li style="margin-bottom: 6px;">
                                             <b style="color: #333;">Design UX/UI:</b> Simiuc Mihai-Ciprian
                                         </li>
+                                        <li style="margin-bottom: 6px;">
+                                            <b style="color: #333;">Vanatori de bug-uri:</b> 
+                                        </li>
                                     </ul>
                                 </div>
 
@@ -333,10 +334,10 @@
                     <!-- Noul buton de upload personalizat -->
                     <div class="custom-file-upload" style="margin-bottom:20px;">
                         <input type="file" id="postMedia" accept="image/*, video/mp4, video/webm, image/heic" style="display: none;" onchange="updateFileName(this, 'postMediaLabel')">
-                        <label for="postMedia" id="postMediaLabel" class="file-upload-label">
-                            <i class="material-icons">cloud_upload</i> 
-                            <span>Alege o imagine sau un video...</span>
-                        </label>
+                    <label for="postMedia" id="postMediaLabel" class="action-btn" style="width: 100%; margin-bottom: 20px; background-color: #666; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                        <i class="material-icons">perm_media</i> 
+                        <span>Adaugă imagine sau video</span>
+                    </label>
                     </div>
 
                     <div style="display:flex; gap:10px;">
@@ -364,6 +365,9 @@
         </main>
 
         <!-- Butoane Plutitoare Globale -->
+<button id="filterPostsBtn" class="floating-filter-btn" onclick="togglePostsFilter()">
+            <i class="material-icons">public</i>
+        </button>
         <button id="toggleTasksMeetingsBtn" class="floating-toggle-btn" onclick="toggleTasksMeetings()">Ședințe</button>
         <button id="addPostBtn" class="floating-add-post-btn" onclick="openAddPostModal()">
             <i class="material-icons">add</i>

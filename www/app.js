@@ -6,6 +6,7 @@ let currentDept = '';
 let currentUserName = '';
 let currentUserGooglePic = 'icon-192.png';
 let profileCacheBuster = new Date().getTime(); 
+let isDeptFilterActive = false;
 
 const API_URL = 'https://app.euroavia-bucuresti.ro/api/server.php';
 let userSavedEvents = [];
@@ -189,9 +190,11 @@ function switchTab(tabId, title, element) {
 
     const toggleBtn = document.getElementById('toggleTasksMeetingsBtn');
     const addPostBtn = document.getElementById('addPostBtn');
+    const filterPostsBtn = document.getElementById('filterPostsBtn');
     
-    if (toggleBtn) toggleBtn.style.display = (tabId === 'tasks') ? 'block' : 'none';
+if (toggleBtn) toggleBtn.style.display = (tabId === 'tasks') ? 'block' : 'none';
     if (addPostBtn) addPostBtn.style.display = (tabId === 'posts') ? 'flex' : 'none';
+    if (filterPostsBtn) filterPostsBtn.style.display = (tabId === 'posts') ? 'flex' : 'none';
     
     if (tabId === 'members') loadDepartmentMembers();
     
@@ -912,6 +915,24 @@ function saveAndFetchLeaderboard(scoreToSave) {
 // ==========================================
 let currentPostIdForComments = null;
 
+function togglePostsFilter() {
+    isDeptFilterActive = !isDeptFilterActive;
+    const btn = document.getElementById('filterPostsBtn');
+    const icon = btn.querySelector('i');
+    
+    if (isDeptFilterActive) {
+        btn.style.backgroundColor = '#28a745'; // Verde pentru vizualizare departament
+        icon.innerText = 'groups'; // Schimbă iconița
+    } else {
+        btn.style.backgroundColor = '#003366'; // Culoarea de bază
+        icon.innerText = 'public'; // Toată lumea
+    }
+    
+    // Reîncarcă postările aplicând filtrul
+    loadPosts(true);
+}
+
+
 function loadPosts(reset = false) {
     if (isFetchingPosts || (!hasMorePosts && !reset)) return;
 
@@ -930,8 +951,9 @@ function loadPosts(reset = false) {
     }
 
     isFetchingPosts = true;
+    let deptParam = isDeptFilterActive ? `&dept_filter=${encodeURIComponent(currentDept)}` : '';
     
-    fetch(`${API_URL}?action=get_posts&member_id=${currentMemberId}&limit=${limit}&offset=${postsOffset}`)
+    fetch(`${API_URL}?action=get_posts&member_id=${currentMemberId}&limit=${limit}&offset=${postsOffset}${deptParam}`)
     .then(res => res.json())
     .then(data => {
         isFetchingPosts = false;
@@ -1005,7 +1027,7 @@ function loadPosts(reset = false) {
     });
 }
 
-// Actualizează designul și textul oricărui buton de upload când selectezi un fișier
+// Actualizează designul, arată PREVIZUALIZAREA și confirmă atașarea
 function updateFileName(input, labelId) {
     const label = document.getElementById(labelId);
     if (!label) return; 
@@ -1018,18 +1040,17 @@ function updateFileName(input, labelId) {
     
     if (input.files && input.files.length > 0) {
         const file = input.files[0];
-        labelText.innerText = file.name; 
-        label.classList.add('has-file'); 
-        icon.innerText = 'check_circle'; 
         
-        // --- LOGICĂ DE PREVIZUALIZARE (doar pentru postări) ---
+        // Schimbăm butonul în VERDE pentru a confirma selecția
+        label.style.backgroundColor = '#28a745'; 
+        
+        // --- LOGICĂ DE PREVIZUALIZARE PENTRU POSTĂRI ---
         if (labelId === 'postMediaLabel') {
             const isHeic = file.type.includes('heic') || file.type.includes('heif') || file.name.toLowerCase().endsWith('.heic');
             
             if (isHeic) {
-                // Dacă e de iPhone, îl convertim rapid doar ca să-l poată vedea
                 icon.innerText = 'hourglass_empty';
-                labelText.innerText = "Se încarcă previzualizarea...";
+                labelText.innerText = "Se pregătește...";
                 
                 heic2any({ blob: file, toType: "image/jpeg", quality: 0.5 }).then(convertedBlob => {
                     const finalBlob = Array.isArray(convertedBlob) ? convertedBlob[0] : convertedBlob;
@@ -1039,39 +1060,46 @@ function updateFileName(input, labelId) {
                     }
                     if (videoPreview) videoPreview.style.display = 'none';
                     icon.innerText = 'check_circle';
-                    labelText.innerText = file.name;
+                    labelText.innerText = "Imagine atașată (Modifică)";
                 }).catch(e => {
-                    icon.innerText = 'check_circle';
-                    labelText.innerText = file.name + " (Previzualizare indisponibilă)";
+                    icon.innerText = 'warning';
+                    labelText.innerText = "Imagine atașată (Fără previzualizare)";
                 });
             } 
             else if (file.type.startsWith('image/')) {
-                // Previzualizare poză normală (JPG, PNG)
                 if (imagePreview) {
                     imagePreview.src = URL.createObjectURL(file);
                     imagePreview.style.display = 'block';
                 }
                 if (videoPreview) videoPreview.style.display = 'none';
+                icon.innerText = 'check_circle';
+                labelText.innerText = "Imagine atașată (Modifică)";
             } 
             else if (file.type.startsWith('video/')) {
-                // Previzualizare videoclip (poate da Play direct acolo)
                 if (videoPreview) {
                     videoPreview.src = URL.createObjectURL(file);
                     videoPreview.style.display = 'block';
                 }
                 if (imagePreview) imagePreview.style.display = 'none';
+                icon.innerText = 'check_circle';
+                labelText.innerText = "Video atașat (Modifică)";
             }
+        } 
+        // --- LOGICĂ PENTRU POZA DE PROFIL ---
+        else if (labelId === 'profileMediaLabel') {
+             icon.innerText = 'check_circle';
+             labelText.innerText = "Poză atașată (Modifică)";
         }
+        
     } else {
-        // Resetăm starea dacă utilizatorul dă cancel la selecție
-        label.classList.remove('has-file');
+        // Dacă utilizatorul anulează, readucem butonul la starea GRI
+        label.style.backgroundColor = '#666'; 
         if (labelId === 'profileMediaLabel') {
-            labelText.innerText = 'Alege o poză nouă...';
+            labelText.innerText = 'Încarcă o poză nouă';
             icon.innerText = 'add_a_photo';
         } else {
-            labelText.innerText = 'Alege o imagine sau un video...';
-            icon.innerText = 'cloud_upload';
-            // Ascundem căsuțele de previzualizare
+            labelText.innerText = 'Adaugă imagine sau video';
+            icon.innerText = 'perm_media';
             if (imagePreview) { imagePreview.src = ''; imagePreview.style.display = 'none'; }
             if (videoPreview) { videoPreview.src = ''; videoPreview.style.display = 'none'; }
         }
