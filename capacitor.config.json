@@ -2,11 +2,29 @@
   "appId": "ro.euroaviabucuresti.app",
   "appName": "Euroavia Bucuresti",
   "webDir": "www",
+  "bundledWebRuntime": false,
    "plugins": {
     "GoogleAuth": {
       "scopes": ["profile", "email"],
       "serverClientId": "440151498628-lh87c1pfc7asgrohle857uls25jvnkvu.apps.googleusercontent.com",
       "forceCodeForRefreshToken": true
+    },
+    "SplashScreen": {
+      "launchShowDuration": 2500,
+      "launchAutoHide": true,
+      "backgroundColor": "#003366",
+      "androidSplashResourceName": "splash",
+      "androidScaleType": "CENTER_CROP",
+      "showSpinner": true,
+      "androidSpinnerStyle": "large",
+      "spinnerColor": "#ffffff",
+      "splashFullScreen": true,
+      "splashImmersive": true
+    },
+    "StatusBar": {
+      "style": "DARK",
+      "backgroundColor": "#003366",
+      "overlaysWebView": false
     }
   }
 }

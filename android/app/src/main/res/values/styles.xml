@@ -13,10 +13,13 @@
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
         <item name="android:background">@null</item>
+        <!-- NOU: Forțează bara de sus (Status Bar) să fie albastră în aplicație -->
+        <item name="android:statusBarColor">#003366</item>
     </style>
-
 
     <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
         <item name="android:background">@drawable/splash</item>
+        <!-- NOU: Forțează fundalul de Splash Screen să fie albastru (pentru Android 12+) -->
+        <item name="windowSplashScreenBackground">#003366</item>
     </style>
 </resources>
