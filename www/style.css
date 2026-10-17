@@ -11,152 +11,34 @@ body, html { background-color: #f4f7f6; color: #333; height: 100vh; height: 100d
 
 /* --- STRUCTURA APP SHELL & HEADER --- */
 #mainApp { display: flex; flex-direction: column; height: 100vh; height: 100dvh; }
-.app-header { 
-    background-color: #003366; 
-    color: white; 
-    padding: 12px 15px; 
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1); 
-    z-index: 10; 
-    display: flex; 
-    align-items: center; 
-    gap: 15px; 
-}
+.app-header { background-color: #003366; color: white; padding: 12px 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); z-index: 10; display: flex; align-items: center; gap: 15px; }
 .app-header h1 { font-size: 20px; margin: 0; }
 
-.menu-btn {
-    background: transparent;
-    border: none;
-    color: white;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 6px;
-    border-radius: 50%;
-    transition: background-color 0.2s;
-}
+.menu-btn { background: transparent; border: none; color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 6px; border-radius: 50%; transition: background-color 0.2s; }
 .menu-btn:active { background-color: rgba(255, 255, 255, 0.2); }
 .menu-btn i { font-size: 26px; }
 
 /* --- MENIU LATERAL (DRAWER) & OVERLAY --- */
-.menu-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    height: 100dvh;
-    background-color: rgba(0, 0, 0, 0.5);
-    z-index: 998;
-    opacity: 0;
-    visibility: hidden;
-    transition: opacity 0.3s ease, visibility 0.3s ease;
-}
-.menu-overlay.open {
-    opacity: 1;
-    visibility: visible;
-}
-
-.side-menu {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 280px;
-    max-width: 80vw;
-    height: 100vh;
-    height: 100dvh;
-    background-color: #ffffff;
-    z-index: 999;
-    box-shadow: 4px 0 15px rgba(0, 0, 0, 0.2);
-    display: flex;
-    flex-direction: column;
-    transform: translateX(-100%);
-    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-.side-menu.open {
-    transform: translateX(0);
-}
-
-.side-menu-header {
-    background-color: #003366;
-    color: white;
-    padding: 35px 20px 25px 20px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-}
-.profile-pic {
-    width: 86px;
-    height: 86px;
-    border-radius: 50%;
-    object-fit: cover;
-    border: 3px solid #ffffff;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
-    margin-bottom: 12px;
-    background-color: #e6f0fa;
-}
-
-.profile-pic-large {
-    width: 120px; 
-    height: 120px; 
-    border-radius: 50%; 
-    object-fit: cover; 
-    border: 4px solid #003366; 
-    box-shadow: 0 4px 15px rgba(0, 51, 102, 0.15);
-    background-color: #e6f0fa;
-}
-.side-menu-header h3 {
-    font-size: 17px;
-    font-weight: 600;
-    margin: 0;
-    line-height: 1.3;
-}
-
-.side-menu-body {
-    flex: 1;
-    padding: 15px 12px;
-    overflow-y: auto;
-}
-
-.side-menu-footer {
-    padding: 12px;
-    border-top: 1px solid #eaeaea;
-    background-color: #fafafa;
-}
-
-.side-menu-btn {
-    width: 100%;
-    background: transparent;
-    border: none;
-    padding: 12px 15px;
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    font-size: 15px;
-    font-weight: 600;
-    color: #003366;
-    cursor: pointer;
-    transition: background-color 0.2s;
-    text-align: left;
-}
+.menu-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; height: 100dvh; background-color: rgba(0, 0, 0, 0.5); z-index: 998; opacity: 0; visibility: hidden; transition: opacity 0.3s ease, visibility 0.3s ease; }
+.menu-overlay.open { opacity: 1; visibility: visible; }
+.side-menu { position: fixed; top: 0; left: 0; width: 280px; max-width: 80vw; height: 100vh; height: 100dvh; background-color: #ffffff; z-index: 999; box-shadow: 4px 0 15px rgba(0, 0, 0, 0.2); display: flex; flex-direction: column; transform: translateX(-100%); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+.side-menu.open { transform: translateX(0); }
+.side-menu-header { background-color: #003366; color: white; padding: 35px 20px 25px 20px; display: flex; flex-direction: column; align-items: center; text-align: center; }
+.profile-pic { width: 86px; height: 86px; border-radius: 50%; object-fit: cover; border: 3px solid #ffffff; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25); margin-bottom: 12px; background-color: #e6f0fa; }
+.profile-pic-large { width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 4px solid #003366; box-shadow: 0 4px 15px rgba(0, 51, 102, 0.15); background-color: #e6f0fa; }
+.side-menu-header h3 { font-size: 17px; font-weight: 600; margin: 0; line-height: 1.3; }
+.side-menu-body { flex: 1; padding: 15px 12px; overflow-y: auto; }
+.side-menu-footer { padding: 12px; border-top: 1px solid #eaeaea; background-color: #fafafa; }
+.side-menu-btn { width: 100%; background: transparent; border: none; padding: 12px 15px; border-radius: 8px; display: flex; align-items: center; gap: 14px; font-size: 15px; font-weight: 600; color: #003366; cursor: pointer; transition: background-color 0.2s; text-align: left; }
 .side-menu-btn i { font-size: 22px; color: #003366; }
 .side-menu-btn:hover, .side-menu-btn:active { background-color: #e6f0fa; }
-
-.side-menu-btn.footer-btn {
-    color: #555;
-    font-weight: 500;
-    font-size: 14px;
-}
+.side-menu-btn.footer-btn { color: #555; font-weight: 500; font-size: 14px; }
 .side-menu-btn.footer-btn i { color: #666; font-size: 20px; }
 .side-menu-btn.footer-btn:hover, .side-menu-btn.footer-btn:active { background-color: #eeeeee; }
 
 /* --- ZONA DE CONȚINUT --- */
 .content-area { flex: 1; overflow-y: auto; padding-bottom: 80px; }
 .container { padding: 15px; max-width: 600px; margin: 0 auto; }
-
-/* Tab-urile (Ascunse vs Active) */
 .tab-content { display: none; }
 .tab-content.active { display: block; animation: fadeIn 0.3s ease; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
@@ -177,8 +59,6 @@ body, html { background-color: #f4f7f6; color: #333; height: 100vh; height: 100d
 .event-form-group p { font-weight: bold; margin-bottom: 10px; color: #003366; font-size: 15px; }
 .event-label { display: flex; align-items: center; margin-bottom: 10px; font-size: 14px; cursor: pointer; color: #444; }
 .event-label input { margin-right: 10px; transform: scale(1.3); cursor: pointer; }
-
-/* --- CARDURI EVENIMENTE (EXTENSIBILE) --- */
 .event-card { cursor: pointer; transition: 0.2s; }
 .event-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
 .event-card-header { display: flex; justify-content: space-between; align-items: center; }
@@ -213,22 +93,52 @@ body, html { background-color: #f4f7f6; color: #333; height: 100vh; height: 100d
 .leaderboard-item { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px dashed #ddd; }
 .leaderboard-item b { color: #003366; }
 .leaderboard-item span { background: #ffeb3b; color: #856404; padding: 2px 8px; border-radius: 12px; font-weight: bold; font-size: 12px; }
-
-/* --- ANIMAȚIE LOBBY BATTLE --- */
 .spinner-pulse { width: 60px; height: 60px; background-color: #d9534f; border-radius: 100%; margin: 0 auto; animation: sk-scaleout 1.0s infinite ease-in-out; }
 @keyframes sk-scaleout { 0% { transform: scale(0); } 100% { transform: scale(1.0); opacity: 0; } }
 
-/* --- BUTON PLUTITOR --- */
+/* --- BUTOANE PLUTITOARE (Ședințe și Adăugare Postare) --- */
 .floating-toggle-btn { display: none; position: fixed; bottom: 85px; right: 20px; background-color: #003366; color: white; border: none; padding: 12px 24px; border-radius: 30px; font-size: 14px; font-weight: bold; box-shadow: 0 4px 10px rgba(0, 51, 102, 0.4); cursor: pointer; z-index: 99; transform: translateZ(0); will-change: transform, opacity; animation: fabPopIn 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
 .floating-toggle-btn:active { transform: scale(0.95); }
+
+.floating-add-post-btn { display: none; position: fixed; bottom: 85px; right: 20px; width: 60px; height: 60px; background-color: #003366; color: white; border: none; border-radius: 50%; font-size: 32px; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0, 51, 102, 0.4); cursor: pointer; z-index: 99; transform: translateZ(0); will-change: transform, opacity; animation: fabPopIn 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+.floating-add-post-btn:active { transform: scale(0.95); background-color: #00509e; }
+
 @keyframes fabPopIn { 0% { opacity: 0; transform: scale(0.3); } 100% { opacity: 1; transform: scale(1); } }
 
 /* --- BOTTOM NAVIGATION BAR --- */
-.bottom-nav { background-color: white; display: flex; justify-content: space-around; padding: 10px 0 15px 0; border-top: 1px solid #e0e0e0; box-shadow: 0 -2px 10px rgba(0,0,0,0.05); z-index: 100; }
+.bottom-nav { background-color: white; display: flex; justify-content: space-around; padding: 10px 0 15px 0; border-top: 1px solid #e0e0e0; box-shadow: 0 -2px 10px rgba(0,0,0,0.05); z-index: 100; position: relative; }
 .nav-item { display: flex; flex-direction: column; align-items: center; text-decoration: none; color: #757575; flex: 1; }
 .nav-item i { font-size: 24px; margin-bottom: 4px; transition: 0.2s; }
 .nav-item span { font-size: 11px; font-weight: 600; }
 .nav-item.active { color: #003366; } 
 .nav-item.active i { transform: scale(1.1); }
 
+/* --- POSTĂRI & MODALE --- */
+.post-card { background: white; padding: 18px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); margin-bottom: 20px; border: 1px solid #eee; }
+.post-header { display: flex; align-items: center; margin-bottom: 12px; gap: 12px; }
+.post-header img { width: 45px; height: 45px; border-radius: 50%; object-fit: cover; border: 2px solid #e6f0fa; }
+.post-header-info h4 { margin: 0; font-size: 16px; color: #111; }
+.post-header-info span { font-size: 12px; color: #777; }
+.post-text { font-size: 14px; margin-bottom: 15px; color: #222; line-height: 1.5; white-space: pre-wrap; }
+.post-media { width: 100%; border-radius: 8px; margin-bottom: 15px; max-height: 350px; object-fit: cover; background: #000; }
+.post-actions { display: flex; gap: 20px; border-top: 1px solid #eee; padding-top: 12px; }
+.post-action-btn { background: transparent; border: none; display: flex; align-items: center; gap: 6px; color: #666; font-size: 14px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+.post-action-btn:active { transform: scale(0.95); }
+.post-action-btn.liked { color: #d9534f; }
+.post-action-btn.liked i { color: #d9534f; }
+.modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.6); z-index: 2000; display: flex; justify-content: center; align-items: center; }
+.modal-content { width: 92%; max-width: 500px; background: white; border-radius: 12px; padding: 20px; box-shadow: 0 5px 20px rgba(0,0,0,0.2); }
+.comment-item { display: flex; gap: 12px; }
+.comment-item img { width: 35px; height: 35px; border-radius: 50%; object-fit: cover; border: 1px solid #ddd; }
+.comment-box { background: #f8f9fa; padding: 12px; border-radius: 12px; flex: 1; border: 1px solid #eee; }
+.comment-box h5 { margin: 0 0 5px 0; font-size: 14px; color: #003366; }
+.comment-box p { margin: 0; font-size: 13px; color: #333; line-height: 1.4; }
 
+/* --- Stilizare Buton Upload Media --- */
+.file-upload-label { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 25px 15px; background-color: #f8f9fa; border: 2px dashed #003366; border-radius: 12px; cursor: pointer; transition: all 0.3s ease; text-align: center; }
+.file-upload-label:hover, .file-upload-label:active { background-color: #e6f0fa; }
+.file-upload-label i { font-size: 38px; margin-bottom: 8px; color: #003366; transition: color 0.3s ease; }
+.file-upload-label span { font-size: 14px; font-weight: 600; color: #444; word-break: break-all; }
+.file-upload-label.has-file { background-color: #e8f5e9; border-color: #28a745; border-style: solid; }
+.file-upload-label.has-file i { color: #28a745; }
+.file-upload-label.has-file span { color: #155724; }

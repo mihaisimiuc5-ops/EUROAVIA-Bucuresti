@@ -5,22 +5,36 @@ let currentMemberId = null;
 let currentDept = '';  
 let currentUserName = '';
 let currentUserGooglePic = 'icon-192.png';
-let profileCacheBuster = new Date().getTime(); // Sistem anti-cache global
+let profileCacheBuster = new Date().getTime(); 
 
 const API_URL = 'https://app.euroavia-bucuresti.ro/api/server.php';
 let userSavedEvents = [];
 let departmentMembersLoaded = false;
 
+// Variabile pentru Paginare (Infinite Scroll)
+let postsOffset = 0;
+let isFetchingPosts = false;
+let hasMorePosts = true;
+
 // ==========================================
-// 2. LOGICA DE AUTENTIFICARE GOOGLE (Hibrid: Nativ & Web)
+// 2. LOGICA DE AUTENTIFICARE GOOGLE
 // ==========================================
 window.onload = async function () {
     const btnWrapper = document.getElementById("googleButton");
 
-    // Verificăm dacă suntem într-un mediu nativ (APK pe telefon) generat de Capacitor
+    // --- ASCULTĂTOR DE SCROLL PENTRU INFINITE SCROLL ---
+    const contentArea = document.getElementById('contentArea');
+    if (contentArea) {
+        contentArea.addEventListener('scroll', function() {
+            if (document.getElementById('tab-posts').classList.contains('active')) {
+                if (this.scrollTop + this.clientHeight >= this.scrollHeight - 100) {
+                    loadPosts(false); 
+                }
+            }
+        });
+    }
+
     if (window.Capacitor && window.Capacitor.isNativePlatform()) {
-        
-        // 1. DESENĂM BUTONUL NATIV PRIMUL LUCRU (pentru a evita ecranul gol)
         btnWrapper.innerHTML = `
             <button onclick="nativeGoogleLogin()" style="width: 100%; padding: 12px; font-size: 16px; background: white; color: #555; border: 1px solid #ccc; border-radius: 4px; display: flex; align-items: center; justify-content: center; gap: 12px; font-family: Roboto, sans-serif; font-weight: 500; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.2);">
                 <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" width="20" alt="G Logo">
@@ -28,7 +42,6 @@ window.onload = async function () {
             </button>
         `;
 
-        // 2. Încercăm inițializarea pluginului în siguranță
         try {
             const { GoogleAuth } = window.Capacitor.Plugins;
             if (GoogleAuth) {
@@ -41,15 +54,13 @@ window.onload = async function () {
         } catch (err) {
             console.warn("Eroare la inițializarea pluginului GoogleAuth:", err);
         }
-
     } else {
-        // Suntem pe Web clasic, folosim soluția standard
         try {
             google.accounts.id.initialize({
                 client_id: "440151498628-lh87c1pfc7asgrohle857uls25jvnkvu.apps.googleusercontent.com",
                 callback: handleCredentialResponse,
                 hosted_domain: "euroavia-bucuresti.ro",
-                auto_select: false // Previne autologin-ul pe browser web
+                auto_select: false 
             });
             google.accounts.id.renderButton(
                 btnWrapper,
@@ -61,25 +72,17 @@ window.onload = async function () {
     }
 };
 
-// Funcția care gestionează logarea prin pluginul nativ Capacitor
 async function nativeGoogleLogin() {
     try {
         const { GoogleAuth } = window.Capacitor.Plugins;
-        
-        // Verificăm dacă plugin-ul a fost inclus corect în APK
         if (!GoogleAuth) {
-            alert("Eroare critică: Plugin-ul GoogleAuth nu a fost compilat în acest APK. Asigură-te că package.json și folderul android au fost trimise pe GitHub.");
+            alert("Eroare critică: Plugin-ul GoogleAuth nu a fost compilat în acest APK.");
             return;
         }
-
         const googleUser = await GoogleAuth.signIn();
-        
-        // Simulăm răspunsul ca să funcționeze cu codul tău existent
         const fakeResponseObj = { credential: googleUser.authentication.idToken };
         handleCredentialResponse(fakeResponseObj);
-        
     } catch (error) {
-        console.error("Eroare la logarea nativă:", error);
         alert("Eroare la logare: " + (error.message || JSON.stringify(error)));
     }
 }
@@ -90,35 +93,25 @@ function handleCredentialResponse(response) {
     const numeUser = responsePayload.name;
 
     if (emailUser.endsWith('@euroavia-bucuresti.ro')) {
-        
-        // Salvăm poza Google ca backup global
         currentUserGooglePic = responsePayload.picture || 'icon-192.png';
         const googlePicUrl = responsePayload.picture || '';
-        
-        // Cerem ID-ul, numele și departamentul din baza de date pe baza email-ului + trimitem poza de pe Google ca fallback pentru server
         const fetchUrl = `${API_URL}?action=get_user_info&email=${encodeURIComponent(emailUser)}&google_pic=${encodeURIComponent(googlePicUrl)}`;
         
         fetch(fetchUrl, { method: 'GET' })
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                // Utilizatorul a fost găsit în DB
                 currentMemberId = data.id;
                 currentDept = data.departament;
                 currentUserName = data.nume_complet || numeUser;
             } else {
-                // Utilizatorul NU a fost găsit -> alocăm ID-ul 1 ca fallback (invitat)
-                console.warn("Cont negăsit în DB. Se folosește ID-ul 1.");
                 currentMemberId = 1;
                 currentDept = 'Vizitator';
                 currentUserName = numeUser;
             }
 
-            // Afișăm interfața aplicației
             document.getElementById('loginScreen').style.display = 'none';
             document.getElementById('mainApp').style.display = 'flex';
-            
-            // Setăm numele și poza de profil în meniul lateral (folosind sistemul anti-cache)
             document.getElementById('menuUserName').innerText = currentUserName;
             
             const profileImg = document.getElementById('menuProfilePic');
@@ -135,24 +128,17 @@ function handleCredentialResponse(response) {
             switchTab('tasks', 'Dashboard', firstTabBtn);
         })
         .catch(error => {
-            console.error('Eroare fetch user info:', error);
             alert("Eroare de conexiune la preluarea datelor contului.");
         });
 
     } else {
         alert("Eroare de acces: Te rugăm să folosești exclusiv adresa de email @euroavia-bucuresti.ro!");
-        
-        // Deconectăm forțat contul greșit pentru a-ți permite să alegi altul
         if (window.Capacitor && window.Capacitor.isNativePlatform()) {
             const { GoogleAuth } = window.Capacitor.Plugins;
-            if (GoogleAuth) {
-                GoogleAuth.signOut();
-            }
+            if (GoogleAuth) GoogleAuth.signOut();
         } else {
             google.accounts.id.disableAutoSelect();
-            google.accounts.id.revoke(emailUser, done => {
-                console.log("Sesiunea contului personal a fost ștearsă.");
-            });
+            google.accounts.id.revoke(emailUser, done => { });
         }
     }
 }
@@ -177,8 +163,8 @@ function toggleSideMenu() {
 }
 
 function openAppDetails() {
-    toggleSideMenu(); // Închidem meniul lateral
-    switchTab('app-details', 'Detalii Aplicație', null); // Navigăm la noul tab de detalii
+    toggleSideMenu(); 
+    switchTab('app-details', 'Detalii Aplicație', null); 
 }
 
 function setupDynamicTabs() {
@@ -202,12 +188,16 @@ function switchTab(tabId, title, element) {
     if (element) element.classList.add('active');
 
     const toggleBtn = document.getElementById('toggleTasksMeetingsBtn');
-    if (toggleBtn) {
-        if (tabId === 'tasks') toggleBtn.style.display = 'block';
-        else toggleBtn.style.display = 'none';
-    }
+    const addPostBtn = document.getElementById('addPostBtn');
+    
+    if (toggleBtn) toggleBtn.style.display = (tabId === 'tasks') ? 'block' : 'none';
+    if (addPostBtn) addPostBtn.style.display = (tabId === 'posts') ? 'flex' : 'none';
     
     if (tabId === 'members') loadDepartmentMembers();
+    
+    if (tabId === 'posts' && postsOffset === 0) {
+        loadPosts(true);
+    }
 }
 
 let showingTasks = true;
@@ -229,23 +219,20 @@ function toggleTasksMeetings() {
 // 4. LOGICA PENTRU PROFIL (VIEW & EDIT)
 // ==========================================
 function openUserProfile() {
-    toggleSideMenu(); // Închide meniul lateral
+    toggleSideMenu(); 
     switchTab('profile', 'Profilul Tău', null);
-    toggleProfileEditMode(false); // Deschide mereu pe modul de VIZUALIZARE
+    toggleProfileEditMode(false); 
     
-    // Setăm datele vizuale de bază
     document.getElementById('profilePageName').innerText = currentUserName;
     document.getElementById('profilePageDept').innerText = currentDept;
 
-    // Setare poză profil cu Fallback la poza de pe Google
     const viewImg = document.getElementById('profilePageImg');
     viewImg.src = `${API_URL}?action=get_profile_pic&member_id=${currentMemberId}&t=${profileCacheBuster}`;
     viewImg.onerror = function() {
         this.onerror = null;
-        this.src = currentUserGooglePic; // Fallback Google
+        this.src = currentUserGooglePic; 
     };
 
-    // Preluare Bio din baza de date
     document.getElementById('profilePageBio').innerHTML = '<i>Se încarcă...</i>';
     fetch(`${API_URL}?action=get_user_profile&member_id=${currentMemberId}`)
     .then(res => res.json())
@@ -253,11 +240,9 @@ function openUserProfile() {
         if (data.success) {
             const bioText = data.bio || '';
             document.getElementById('profilePageBio').innerText = bioText.trim() !== '' ? bioText : 'Nu ai adăugat nicio descriere încă.';
-            document.getElementById('profileBioInput').value = bioText; // Precompletare input
+            document.getElementById('profileBioInput').value = bioText; 
         }
-    })
-    .catch(err => {
-        console.error('Eroare profil:', err);
+    }).catch(err => {
         document.getElementById('profilePageBio').innerText = 'Eroare la încărcarea datelor.';
     });
 }
@@ -293,10 +278,7 @@ function saveUserProfile(e) {
             btnSubmit.disabled = false;
 
             if (data.success) {
-                // Actualizăm live ce se vede pe ecran (Textul Bio)
                 document.getElementById('profilePageBio').innerText = bioText.trim() !== '' ? bioText : 'Nu ai adăugat nicio descriere încă.';
-                
-                // Generăm un nou timestamp pentru a forța browserul să descarce noua imagine
                 profileCacheBuster = new Date().getTime();
                 const newPicUrl = `${API_URL}?action=get_profile_pic&member_id=${currentMemberId}&t=${profileCacheBuster}`;
                 
@@ -309,16 +291,17 @@ function saveUserProfile(e) {
                 updateImageFallback('profilePageImg');
                 updateImageFallback('menuProfilePic');
 
-                // Resetăm inputul și închidem formularul
+                // Resetăm inputul și aspectul butonului
                 fileInput.value = '';
-                toggleProfileEditMode(false); // Revenim la Vizualizare
+                if(typeof updateFileName === 'function') updateFileName(fileInput, 'profileMediaLabel');
                 
-                // Reîncărcăm lista de membri ca să li se schimbe poza și lor dacă intrăm pe tab
+                toggleProfileEditMode(false); 
+                
                 if (document.getElementById('tab-members').classList.contains('active')) {
                     departmentMembersLoaded = false;
                     loadDepartmentMembers();
                 } else {
-                    departmentMembersLoaded = false; // Forțăm refresh data viitoare
+                    departmentMembersLoaded = false; 
                 }
 
             } else {
@@ -332,15 +315,11 @@ function saveUserProfile(e) {
         });
     };
 
-    // Dacă utilizatorul a încărcat o poză nouă, o procesăm Base64
     if (fileInput.files && fileInput.files[0]) {
         const reader = new FileReader();
-        reader.onload = function(uploadEvent) {
-            sendData(uploadEvent.target.result);
-        };
+        reader.onload = function(uploadEvent) { sendData(uploadEvent.target.result); };
         reader.readAsDataURL(fileInput.files[0]);
     } else {
-        // Dacă a modificat doar textul (fără poză)
         sendData(null);
     }
 }
@@ -360,11 +339,8 @@ function loadDashboardData() {
             renderMeetings(data.date_dashboard.sedinte);
             userSavedEvents = data.date_dashboard.evenimente_salvate || [];
             renderSavedEventsOrForm();
-        } else {
-            alert('Eroare API: ' + data.message);
         }
-    })
-    .catch(error => console.error('Eroare loadDashboardData:', error));
+    });
 }
 
 function renderTasks(tasks) {
@@ -613,9 +589,8 @@ function loadDepartmentMembers() {
             renderLeaders(data.supervizor, data.coordonator, containerLideri);
             renderMembersList(data.membri, containerMembri);
             departmentMembersLoaded = true;
-        } else containerMembri.innerHTML = `<p style="color:red;">Eroare: ${data.message}</p>`;
-    })
-    .catch(err => containerMembri.innerHTML = `<p style="color:red;">Eroare de conexiune la server.</p>`);
+        }
+    });
 }
 
 function renderLeaders(sup, coord, container) {
@@ -654,8 +629,6 @@ function renderMembersList(membri, container) {
     membri.forEach(m => {
         const initialaNume = m.nume ? m.nume.charAt(0).toUpperCase() : '';
         const initialaPrenume = m.prenume ? m.prenume.charAt(0).toUpperCase() : '';
-        
-        // Generăm URL-ul pozei folosind ID-ul membrului + sistem anti-cache
         const picUrl = `${API_URL}?action=get_profile_pic&member_id=${m.id}&t=${profileCacheBuster}`;
         
         html += `
@@ -671,12 +644,11 @@ function renderMembersList(membri, container) {
         `;
     });
     html += '</div>';
-    
     container.innerHTML = html;
 }
 
 // ==========================================
-// 8. JOCUL QUIZ: SINGLEPLAYER & 1V1 BATTLE (INVITE)
+// 8. JOCUL QUIZ: SINGLEPLAYER & 1V1 BATTLE
 // ==========================================
 const allQuizQuestions = [
     { q: "Ce forță aerodinamică se opune în mod direct greutății aeronavei?", options: ["Tracțiunea", "Portanța", "Rezistența la înaintare", "Frecarea"], answer: 1, category: "Aerodinamică", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e0/Airfoil_lift_and_drag.svg/512px-Airfoil_lift_and_drag.svg.png" },
@@ -746,7 +718,6 @@ function startQuiz(isBattle, seed = null) {
     loadQuizQuestion();
 }
 
-// --- LOGICA PENTRU LOBBY (INVITE) ---
 function createBattleRoom() {
     document.getElementById('quizStartScreen').style.display = 'none';
     document.getElementById('quizMatchmakingScreen').style.display = 'block';
@@ -755,9 +726,7 @@ function createBattleRoom() {
     fetch(API_URL, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'create_invite', member_id: currentMemberId })
-    })
-    .then(res => res.json())
-    .then(data => {
+    }).then(res => res.json()).then(data => {
         if(data.success) {
             battleId = data.battle_id;
             playerNum = data.player;
@@ -777,9 +746,7 @@ function joinBattleRoom() {
     fetch(API_URL, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'join_invite', member_id: currentMemberId, room_code: code })
-    })
-    .then(res => res.json())
-    .then(data => {
+    }).then(res => res.json()).then(data => {
         if(data.success) {
             battleId = data.battle_id;
             playerNum = data.player;
@@ -791,10 +758,7 @@ function joinBattleRoom() {
 function cancelBattleRoom() {
     clearInterval(pollingInterval);
     if (battleId) {
-        fetch(API_URL, { 
-            method: 'POST', headers: { 'Content-Type': 'application/json' }, 
-            body: JSON.stringify({ action: 'end_battle', battle_id: battleId }) 
-        });
+        fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'end_battle', battle_id: battleId }) });
     }
     resetQuizView();
 }
@@ -803,9 +767,7 @@ function checkMatchStatus() {
     fetch(API_URL, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'check_match_status', battle_id: battleId })
-    })
-    .then(res => res.json())
-    .then(data => {
+    }).then(res => res.json()).then(data => {
         if (data.success && data.status === 'playing') {
             clearInterval(pollingInterval);
             startQuiz(true, data.seed);
@@ -817,16 +779,13 @@ function syncBattleScore() {
     fetch(API_URL, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'sync_battle', battle_id: battleId, player_num: playerNum, score: quizScore })
-    })
-    .then(res => res.json())
-    .then(data => {
+    }).then(res => res.json()).then(data => {
         if (data.success) {
             opponentScore = data.opponent_score;
             document.getElementById('oppBattleScore').innerText = opponentScore;
         }
     });
 }
-// -----------------------------------------
 
 function loadQuizQuestion() {
     timeElapsed = 0;
@@ -935,11 +894,9 @@ function saveAndFetchLeaderboard(scoreToSave) {
     fetch(API_URL, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'save_quiz_score', member_id: currentMemberId, score: scoreToSave })
-    })
-    .then(res => res.json())
-    .then(() => { return fetch(`${API_URL}?action=get_quiz_leaderboard`); })
-    .then(res => res.json())
-    .then(data => {
+    }).then(() => fetch(`${API_URL}?action=get_quiz_leaderboard`))
+      .then(res => res.json())
+      .then(data => {
         if(data.success && data.leaderboard.length > 0) {
             lbContainer.innerHTML = '';
             data.leaderboard.forEach((p, index) => {
@@ -947,5 +904,386 @@ function saveAndFetchLeaderboard(scoreToSave) {
                 lbContainer.innerHTML += `<li class="leaderboard-item"><span>${medal} ${p.nume} ${p.prenume}</span><b>${p.max_score} pct</b></li>`;
             });
         } else lbContainer.innerHTML = '<p class="placeholder-text">Nu există scoruri încă.</p>';
+    });
+}
+
+// ==========================================
+// 9. FEED DE POSTĂRI (IMAGINI / VIDEO) - PAGINAT
+// ==========================================
+let currentPostIdForComments = null;
+
+function loadPosts(reset = false) {
+    if (isFetchingPosts || (!hasMorePosts && !reset)) return;
+
+    const container = document.getElementById('postsFeedContainer');
+    let limit = 5; 
+    
+    if (reset) {
+        postsOffset = 0;
+        hasMorePosts = true;
+        limit = 10; 
+        container.innerHTML = '<p class="placeholder-text" id="loadingPostsText">Se încarcă postările...</p>';
+    } else {
+        if (!document.getElementById('loadingMorePostsText')) {
+            container.insertAdjacentHTML('beforeend', '<p class="placeholder-text" id="loadingMorePostsText" style="padding:10px;">Se încarcă mai multe...</p>');
+        }
+    }
+
+    isFetchingPosts = true;
+    
+    fetch(`${API_URL}?action=get_posts&member_id=${currentMemberId}&limit=${limit}&offset=${postsOffset}`)
+    .then(res => res.json())
+    .then(data => {
+        isFetchingPosts = false;
+        
+        const loadText = document.getElementById('loadingPostsText');
+        if (loadText) loadText.remove();
+        const loadMoreText = document.getElementById('loadingMorePostsText');
+        if (loadMoreText) loadMoreText.remove();
+
+        if (data.success) {
+            if (reset && data.posts.length === 0) {
+                container.innerHTML = '<p class="placeholder-text">Nu există postări încă. Apasă pe + pentru a adăuga prima postare!</p>';
+                hasMorePosts = false;
+                return;
+            }
+
+            if (data.posts.length < limit) {
+                hasMorePosts = false;
+            }
+
+            data.posts.forEach(post => {
+                const isLiked = post.user_liked ? 'liked' : '';
+                const likeIcon = post.user_liked ? 'favorite' : 'favorite_border';
+                const authorPic = `${API_URL}?action=get_profile_pic&member_id=${post.member_id}&t=${profileCacheBuster}`;
+                
+                let mediaHtml = '';
+                if (post.media_url) {
+                    const mediaSrc = `${API_URL}?action=get_post_media&file=${post.media_url}`;
+                    if (post.media_type === 'video') {
+                        mediaHtml = `<video class="post-media" controls src="${mediaSrc}"></video>`;
+                    } else {
+                        mediaHtml = `<img class="post-media" src="${mediaSrc}" alt="Media postare">`;
+                    }
+                }
+                
+                const postDate = new Date(post.created_at).toLocaleString('ro-RO', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+
+                const postHtml = `
+                    <div class="post-card" id="post-${post.id}">
+                        <div class="post-header">
+                            <img src="${authorPic}" onerror="this.src='icon-192.png'">
+                            <div class="post-header-info">
+                                <h4>${post.author_name}</h4>
+                                <span>${postDate}</span>
+                            </div>
+                        </div>
+                        ${post.description ? `<div class="post-text">${post.description}</div>` : ''}
+                        ${mediaHtml}
+                        <div class="post-actions">
+                            <button class="post-action-btn ${isLiked}" onclick="toggleLike(${post.id}, this)">
+                                <i class="material-icons">${likeIcon}</i> <span class="likes-count">${post.likes_count}</span>
+                            </button>
+                            <button class="post-action-btn" onclick="openCommentsModal(${post.id})">
+                                <i class="material-icons">chat_bubble_outline</i> <span class="comments-count">${post.comments_count}</span>
+                            </button>
+                        </div>
+                    </div>`;
+                    
+                container.insertAdjacentHTML('beforeend', postHtml);
+            });
+            
+            postsOffset += data.posts.length;
+
+            if (!hasMorePosts && postsOffset > 0 && !document.getElementById('endOfPostsText')) {
+                container.insertAdjacentHTML('beforeend', '<p class="placeholder-text" id="endOfPostsText" style="font-size: 13px; color: #999; padding-bottom: 20px;">Nu mai sunt alte postări.</p>');
+            }
+        }
+    }).catch(err => {
+        console.error(err);
+        isFetchingPosts = false;
+    });
+}
+
+// Actualizează designul și textul oricărui buton de upload când selectezi un fișier
+function updateFileName(input, labelId) {
+    const label = document.getElementById(labelId);
+    if (!label) return; 
+    
+    const labelText = label.querySelector('span');
+    const icon = label.querySelector('i');
+    
+    const imagePreview = document.getElementById('postImagePreview');
+    const videoPreview = document.getElementById('postVideoPreview');
+    
+    if (input.files && input.files.length > 0) {
+        const file = input.files[0];
+        labelText.innerText = file.name; 
+        label.classList.add('has-file'); 
+        icon.innerText = 'check_circle'; 
+        
+        // --- LOGICĂ DE PREVIZUALIZARE (doar pentru postări) ---
+        if (labelId === 'postMediaLabel') {
+            const isHeic = file.type.includes('heic') || file.type.includes('heif') || file.name.toLowerCase().endsWith('.heic');
+            
+            if (isHeic) {
+                // Dacă e de iPhone, îl convertim rapid doar ca să-l poată vedea
+                icon.innerText = 'hourglass_empty';
+                labelText.innerText = "Se încarcă previzualizarea...";
+                
+                heic2any({ blob: file, toType: "image/jpeg", quality: 0.5 }).then(convertedBlob => {
+                    const finalBlob = Array.isArray(convertedBlob) ? convertedBlob[0] : convertedBlob;
+                    if (imagePreview) {
+                        imagePreview.src = URL.createObjectURL(finalBlob);
+                        imagePreview.style.display = 'block';
+                    }
+                    if (videoPreview) videoPreview.style.display = 'none';
+                    icon.innerText = 'check_circle';
+                    labelText.innerText = file.name;
+                }).catch(e => {
+                    icon.innerText = 'check_circle';
+                    labelText.innerText = file.name + " (Previzualizare indisponibilă)";
+                });
+            } 
+            else if (file.type.startsWith('image/')) {
+                // Previzualizare poză normală (JPG, PNG)
+                if (imagePreview) {
+                    imagePreview.src = URL.createObjectURL(file);
+                    imagePreview.style.display = 'block';
+                }
+                if (videoPreview) videoPreview.style.display = 'none';
+            } 
+            else if (file.type.startsWith('video/')) {
+                // Previzualizare videoclip (poate da Play direct acolo)
+                if (videoPreview) {
+                    videoPreview.src = URL.createObjectURL(file);
+                    videoPreview.style.display = 'block';
+                }
+                if (imagePreview) imagePreview.style.display = 'none';
+            }
+        }
+    } else {
+        // Resetăm starea dacă utilizatorul dă cancel la selecție
+        label.classList.remove('has-file');
+        if (labelId === 'profileMediaLabel') {
+            labelText.innerText = 'Alege o poză nouă...';
+            icon.innerText = 'add_a_photo';
+        } else {
+            labelText.innerText = 'Alege o imagine sau un video...';
+            icon.innerText = 'cloud_upload';
+            // Ascundem căsuțele de previzualizare
+            if (imagePreview) { imagePreview.src = ''; imagePreview.style.display = 'none'; }
+            if (videoPreview) { videoPreview.src = ''; videoPreview.style.display = 'none'; }
+        }
+    }
+}
+
+function openAddPostModal() { document.getElementById('addPostModal').style.display = 'flex'; }
+
+function closeAddPostModal() { 
+    document.getElementById('addPostModal').style.display = 'none'; 
+    document.getElementById('postDescription').value = '';
+    
+    // Resetăm fișierul stocat
+    const fileInput = document.getElementById('postMedia');
+    fileInput.value = '';
+    
+    // Ștergem previzualizarea la închiderea ferestrei
+    const imagePreview = document.getElementById('postImagePreview');
+    const videoPreview = document.getElementById('postVideoPreview');
+    if (imagePreview) { imagePreview.src = ''; imagePreview.style.display = 'none'; }
+    if (videoPreview) { videoPreview.src = ''; videoPreview.style.display = 'none'; }
+    
+    // Readucem butonul de upload la starea inițială
+    if(typeof updateFileName === 'function') updateFileName(fileInput, 'postMediaLabel');
+
+    document.getElementById('btnSubmitPost').innerText = 'Postează';
+    document.getElementById('btnSubmitPost').disabled = false;
+}
+
+async function compressImageForPost(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        
+        reader.onload = (event) => {
+            const img = new Image();
+            img.onload = () => {
+                try {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    const MAX_SIZE = 800; 
+                    let width = img.width; 
+                    let height = img.height;
+
+                    if (width > height && width > MAX_SIZE) { 
+                        height *= MAX_SIZE / width; 
+                        width = MAX_SIZE; 
+                    } else if (height > MAX_SIZE) { 
+                        width *= MAX_SIZE / height; 
+                        height = MAX_SIZE; 
+                    }
+
+                    canvas.width = width; 
+                    canvas.height = height;
+                    ctx.drawImage(img, 0, 0, width, height);
+                    resolve(canvas.toDataURL('image/jpeg', 0.5)); 
+                } catch (e) {
+                    reject("Eroare memorie Canvas: " + e.message);
+                }
+            };
+            img.onerror = () => reject("Browserul nu poate citi acest format de imagine (posibil format HEIC, SVG complex sau fișier corupt).");
+            img.src = event.target.result;
+        };
+        reader.onerror = () => reject("Eroare la citirea fișierului de pe disc.");
+    });
+}
+
+async function submitPost() {
+    const desc = document.getElementById('postDescription').value.trim();
+    const fileInput = document.getElementById('postMedia');
+    const btnSubmit = document.getElementById('btnSubmitPost');
+    
+    if (!desc && (!fileInput.files || fileInput.files.length === 0)) {
+        alert("Trebuie să adaugi text sau un fișier media!"); return;
+    }
+
+    btnSubmit.innerText = 'Se postează...'; 
+    btnSubmit.disabled = true;
+    let mediaBase64 = null; let mediaType = null;
+
+    try {
+        if (fileInput.files.length > 0) {
+            let file = fileInput.files[0];
+            
+            const isHeic = file.type.includes('heic') || file.type.includes('heif') || file.name.toLowerCase().endsWith('.heic');
+            if (isHeic) {
+                try {
+                    const convertedBlob = await heic2any({ blob: file, toType: "image/jpeg", quality: 0.8 });
+                    file = Array.isArray(convertedBlob) ? convertedBlob[0] : convertedBlob;
+                } catch (conversionError) {
+                    throw new Error("Nu am putut converti imaginea HEIC de pe iPhone. Te rugăm să încerci altă poză.");
+                }
+            }
+
+            if (file.type.startsWith('image/')) {
+                mediaBase64 = await compressImageForPost(file);
+                mediaType = 'image';
+            } else if (file.type.startsWith('video/')) {
+                if (file.size > 20 * 1024 * 1024) { 
+                    alert("Videoclipul este prea mare (maxim 20MB permis)!"); 
+                    btnSubmit.innerText = 'Postează'; btnSubmit.disabled = false; return; 
+                }
+                mediaType = 'video';
+                mediaBase64 = await new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.onload = (e) => resolve(e.target.result);
+                    reader.readAsDataURL(file);
+                });
+            } else {
+                throw new Error("Format nesuportat. Alege o imagine sau un video valid.");
+            }
+        }
+
+        fetch(API_URL, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'create_post', member_id: currentMemberId, description: desc, media: mediaBase64, media_type: mediaType })
+        })
+        .then(async res => {
+            if (!res.ok) throw new Error("Serverul a refuzat cererea (Cod: " + res.status + "). Posibil limită de mărime depășită.");
+            return res.json();
+        })
+        .then(data => {
+            if (data.success) { 
+                closeAddPostModal(); 
+                loadPosts(true); 
+            } else { 
+                alert('Eroare Bază de Date: ' + data.message); 
+                btnSubmit.innerText = 'Postează'; btnSubmit.disabled = false; 
+            }
+        })
+        .catch(err => {
+            alert("Eroare de la server: " + err.message);
+            btnSubmit.innerText = 'Postează'; 
+            btnSubmit.disabled = false;
+        });
+
+    } catch (error) {
+        alert("Eroare pe dispozitiv:\n" + (error.message || error));
+        btnSubmit.innerText = 'Postează'; 
+        btnSubmit.disabled = false;
+    }
+}
+
+function toggleLike(postId, btnEl) {
+    fetch(API_URL, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'toggle_like', member_id: currentMemberId, post_id: postId })
+    }).then(res => res.json()).then(data => {
+        if (data.success) {
+            const icon = btnEl.querySelector('i');
+            const countSpan = btnEl.querySelector('.likes-count');
+            let count = parseInt(countSpan.innerText);
+            
+            if (data.liked) {
+                btnEl.classList.add('liked'); icon.innerText = 'favorite'; countSpan.innerText = count + 1;
+            } else {
+                btnEl.classList.remove('liked'); icon.innerText = 'favorite_border'; countSpan.innerText = count - 1;
+            }
+        }
+    });
+}
+
+function openCommentsModal(postId) {
+    currentPostIdForComments = postId;
+    document.getElementById('commentsModal').style.display = 'flex';
+    document.getElementById('commentsList').innerHTML = '<p class="placeholder-text">Se încarcă...</p>';
+    fetchComments(postId);
+}
+
+function closeCommentsModal() { document.getElementById('commentsModal').style.display = 'none'; }
+
+function fetchComments(postId) {
+    fetch(`${API_URL}?action=get_comments&post_id=${postId}`)
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            const list = document.getElementById('commentsList');
+            list.innerHTML = '';
+            if (data.comments.length === 0) list.innerHTML = '<p class="placeholder-text" style="text-align:center;">Fii primul care comentează!</p>';
+            data.comments.forEach(c => {
+                const pic = `${API_URL}?action=get_profile_pic&member_id=${c.member_id}&t=${profileCacheBuster}`;
+                list.innerHTML += `
+                    <div class="comment-item">
+                        <img src="${pic}" onerror="this.src='icon-192.png'">
+                        <div class="comment-box">
+                            <h5>${c.author_name}</h5>
+                            <p>${c.comment}</p>
+                        </div>
+                    </div>`;
+            });
+        }
+    });
+}
+
+function submitComment() {
+    const input = document.getElementById('newCommentInput');
+    const txt = input.value.trim();
+    if (!txt) return;
+
+    fetch(API_URL, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'add_comment', member_id: currentMemberId, post_id: currentPostIdForComments, comment: txt })
+    }).then(res => res.json()).then(data => {
+        if (data.success) {
+            input.value = '';
+            fetchComments(currentPostIdForComments);
+            
+            const postCard = document.getElementById(`post-${currentPostIdForComments}`);
+            if (postCard) {
+                const countSpan = postCard.querySelector('.comments-count');
+                if (countSpan) countSpan.innerText = parseInt(countSpan.innerText) + 1;
+            }
+        }
     });
 }
