@@ -37,6 +37,22 @@ window.onload = async function () {
         });
     }
 
+    // --- FORȚARE STATUS BAR ALBASTRU (Ignorăm Dark Mode-ul din Android) ---
+    if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+        try {
+            const { StatusBar } = window.Capacitor.Plugins;
+            if (StatusBar) {
+                const forceStatusBar = () => {
+                    StatusBar.setBackgroundColor({ color: '#003366' }).catch(()=>{});
+                    StatusBar.setStyle({ style: 'DARK' }).catch(()=>{}); // DARK = Text alb
+                };
+
+                forceStatusBar(); // Aplicăm imediat
+                setTimeout(forceStatusBar, 2000); // Forțăm din nou după 2 secunde când dispare Splash-ul
+            }
+        } catch (e) { console.warn("StatusBar error:", e); }
+    }
+
     // --- VERIFICARE SESIUNE SALVATĂ (AUTO-LOGIN) ---
     const savedSession = localStorage.getItem('euroavia_session');
     if (savedSession) {
@@ -63,7 +79,7 @@ window.onload = async function () {
             const firstTabBtn = document.querySelector('.bottom-nav .nav-item');
             switchTab('tasks', 'Dashboard', firstTabBtn);
             
-            return; // Oprim execuția aici
+            return; // Oprim execuția aici dacă e logat
         } catch (e) {
             localStorage.removeItem('euroavia_session');
         }
@@ -71,16 +87,6 @@ window.onload = async function () {
 
     // --- AUTENTIFICARE NOUĂ (CAPACITOR SAU WEB) ---
     if (window.Capacitor && window.Capacitor.isNativePlatform()) {
-        
-        // Forțăm StatusBar-ul să fie albastru cu text alb nativ
-        try {
-            const { StatusBar } = window.Capacitor.Plugins;
-            if (StatusBar) {
-                StatusBar.setBackgroundColor({ color: '#003366' });
-                StatusBar.setStyle({ style: 'DARK' }); 
-            }
-        } catch (e) { console.warn("StatusBar error:", e); }
-
         btnWrapper.innerHTML = `
             <button onclick="nativeGoogleLogin()" style="width: 100%; padding: 12px; font-size: 16px; background: white; color: #555; border: 1px solid #ccc; border-radius: 4px; display: flex; align-items: center; justify-content: center; gap: 12px; font-family: Roboto, sans-serif; font-weight: 500; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.2);">
                 <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" width="20" alt="G Logo">
@@ -1591,8 +1597,12 @@ function logoutUser() {
         try {
             const { StatusBar } = window.Capacitor.Plugins;
             if (StatusBar) {
-                StatusBar.setBackgroundColor({ color: '#003366' });
-                StatusBar.setStyle({ style: 'DARK' }); 
+                const forceStatusBar = () => {
+                    StatusBar.setBackgroundColor({ color: '#003366' }).catch(()=>{});
+                    StatusBar.setStyle({ style: 'DARK' }).catch(()=>{}); 
+                };
+                forceStatusBar();
+                setTimeout(forceStatusBar, 2000);
             }
         } catch (e) { console.warn("StatusBar error:", e); }
     }

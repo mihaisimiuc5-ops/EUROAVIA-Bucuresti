@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="colorPrimary">#003366</color>
+    <!-- Aceasta este linia care dă de fapt culoarea barei de sus: -->
+    <color name="colorPrimaryDark">#003366</color>
+    <color name="colorAccent">#003366</color>
+</resources>
