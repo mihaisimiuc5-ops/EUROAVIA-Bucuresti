@@ -43,12 +43,11 @@ window.onload = async function () {
             const { StatusBar } = window.Capacitor.Plugins;
             if (StatusBar) {
                 const forceStatusBar = () => {
-                    StatusBar.setBackgroundColor({ color: '#003366' }).catch(()=>{});
-                    StatusBar.setStyle({ style: 'DARK' }).catch(()=>{}); // DARK = Text alb
+                    StatusBar.setOverlaysWebView({ overlay: true }).catch(()=>{});
+                    StatusBar.setStyle({ style: 'DARK' }).catch(()=>{}); // Păstrează textul/iconițele albe
                 };
-
-                forceStatusBar(); // Aplicăm imediat
-                setTimeout(forceStatusBar, 2000); // Forțăm din nou după 2 secunde când dispare Splash-ul
+                forceStatusBar();
+                setTimeout(forceStatusBar, 2000);
             }
         } catch (e) { console.warn("StatusBar error:", e); }
     }

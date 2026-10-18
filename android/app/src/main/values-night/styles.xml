@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Aceasta suprascrie setările pentru modul întunecat (Dark Mode) -->
+    <style name="AppTheme.NoActionBar" parent="Theme.AppCompat.Light.NoActionBar">
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+        <item name="android:background">@null</item>
+        
+        <!-- Aici facem bara 100% transparentă noaptea -->
+        <item name="android:statusBarColor">@android:color/transparent</item>
+    </style>
+</resources>
