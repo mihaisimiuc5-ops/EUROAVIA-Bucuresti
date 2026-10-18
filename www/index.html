@@ -47,13 +47,25 @@
     <div id="mainApp" style="display: none;">
         
         <!-- Header cu buton de meniu în stânga -->
-        <header class="app-header">
-            <button class="menu-btn" onclick="toggleSideMenu()" aria-label="Deschide meniul">
-                <i class="material-icons">menu</i>
-            </button>
-            <h1 id="topBarTitle">Dashboard</h1>
-        </header>
+       <header class="app-header">
+            <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+                
+                <!-- Butonul de meniu în stânga -->
+                <button class="menu-btn" onclick="toggleSideMenu()">
+                    <i class="material-icons" style="color: white;">menu</i>
+                </button>
 
+                <!-- Titlul paginii (se va schimba automat din JavaScript când navighezi) -->
+                <h1 id="topBarTitle" style="margin: 0; font-size: 18px; font-weight: 600; text-align: center; flex: 1;">Dashboard</h1>
+
+                <!-- Clopoțelul de notificări în dreapta -->
+                <div id="notificationBell" style="position: relative; cursor: pointer; display: flex; align-items: center;" onclick="openNotifications()">
+                    <i class="material-icons" style="color: white; font-size: 26px;">notifications</i>
+                    <span id="notificationBadge" style="display: none; position: absolute; top: -4px; right: -4px; background-color: #d9534f; color: white; border-radius: 50%; padding: 2px 6px; font-size: 11px; font-weight: bold;">0</span>
+                </div>
+                
+            </div>
+        </header>
         <!-- Overlay întunecat pentru fundal când meniul este deschis -->
         <div id="menuOverlay" class="menu-overlay" onclick="toggleSideMenu()"></div>
 
@@ -97,6 +109,11 @@
 
         <main id="contentArea" class="content-area">
             
+<div id="tab-notifications" class="tab-content" style="padding: 20px; padding-bottom: 80px;">
+    <h2 style="color: #003366; margin-bottom: 20px;">Notificări Recente</h2>
+    <div id="notificationsList"></div>
+</div>
+
             <!-- TAB 1: DASHBOARD (Task-uri și Ședințe) -->
             <div id="tab-tasks" class="tab-content active">
                 <div class="container" id="tasksView">

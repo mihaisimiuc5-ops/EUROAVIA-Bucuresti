@@ -80,8 +80,9 @@ window.onload = async function () {
 
             applyAdminPermissions();
             
-            // NOU: Inițializăm notificările Firebase fiindcă e deja logat
+            // NOU: Inițializăm notificările Firebase și încărcăm istoricul
             initPushNotifications();
+            loadNotifications();
 
             setupDynamicTabs();
             loadDashboardData(); 
@@ -221,8 +222,9 @@ function handleServerLoginResponse(data) {
             this.src = currentUserGooglePic;
         };
         
-        // NOU: Inițializăm notificările Firebase imediat după logarea nouă
+        // NOU: Inițializăm notificările și încărcăm istoricul imediat după logarea nouă
         initPushNotifications();
+        loadNotifications();
 
         setupDynamicTabs();
         loadDashboardData(); 
@@ -244,7 +246,71 @@ function decodeJwtResponse(token) {
 }
 
 // ==========================================
-// 3. LOGICA DE NAVIGARE, MENIU LATERAL ȘI COMUTARE
+// 3. LOGICA NOTIFICĂRILOR (ISTORIC & CLOPOȚEL)
+// ==========================================
+function loadNotifications() {
+    fetch(`${API_URL}?action=get_notifications&member_id=${currentMemberId}`)
+    .then(res => res.json())
+    .then(data => {
+        if(data.success) {
+            renderNotifications(data.notificari);
+            updateNotificationBadge(data.necitite);
+        }
+    }).catch(err => console.error("Eroare încărcare notificări", err));
+}
+
+function renderNotifications(notifs) {
+    const list = document.getElementById('notificationsList');
+    if (!list) return;
+    list.innerHTML = '';
+    
+    if(notifs.length === 0) { 
+        list.innerHTML = '<p class="placeholder-text">Nu ai nicio notificare momentan.</p>'; 
+        return; 
+    }
+    
+    notifs.forEach(n => {
+        const isUnread = n.citit == 0;
+        const border = isUnread ? 'border-left: 4px solid #d9534f;' : 'border-left: 4px solid #ddd;';
+        const bg = isUnread ? 'background-color: #fff8f8;' : 'background-color: #ffffff;';
+        const date = new Date(n.created_at).toLocaleString('ro-RO', {day: '2-digit', month: 'short', hour:'2-digit', minute:'2-digit'});
+        
+        list.innerHTML += `
+            <div style="padding: 15px; margin-bottom: 12px; border-radius: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); ${bg} ${border}">
+                <h4 style="margin: 0 0 5px 0; color: #003366; font-size: 15px;">${n.titlu}</h4>
+                <p style="margin: 0 0 8px 0; font-size: 14px; color: #444;">${n.mesaj}</p>
+                <span style="font-size: 11px; color: #888;">${date}</span>
+            </div>
+        `;
+    });
+}
+
+function updateNotificationBadge(count) {
+    const badge = document.getElementById('notificationBadge');
+    if (!badge) return;
+    if(count > 0) { 
+        badge.style.display = 'block'; 
+        badge.innerText = count > 99 ? '99+' : count; 
+    } else { 
+        badge.style.display = 'none'; 
+    }
+}
+
+function openNotifications() {
+    switchTab('notifications', 'Notificări', null);
+    
+    // Marcam notificările ca citite în baza de date
+    fetch(API_URL, { 
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'mark_notifications_read', member_id: currentMemberId }) 
+    }).then(() => { 
+        updateNotificationBadge(0); 
+        loadNotifications(); // Refresh ca să piardă fundalul roșu cele abia citite
+    });
+}
+
+// ==========================================
+// 4. LOGICA DE NAVIGARE, MENIU LATERAL ȘI COMUTARE
 // ==========================================
 function toggleSideMenu() {
     const sideMenu = document.getElementById('sideMenu');
@@ -272,7 +338,9 @@ function switchTab(tabId, title, element) {
 
     const allTabs = document.querySelectorAll('.tab-content');
     allTabs.forEach(tab => tab.classList.remove('active'));
-    document.getElementById(`tab-${tabId}`).classList.add('active');
+    
+    const targetTab = document.getElementById(`tab-${tabId}`);
+    if (targetTab) targetTab.classList.add('active');
 
     const allNavItems = document.querySelectorAll('.nav-item');
     allNavItems.forEach(nav => nav.classList.remove('active'));
@@ -309,7 +377,7 @@ function toggleTasksMeetings() {
 }
 
 // ==========================================
-// 4. LOGICA PENTRU PROFIL (VIEW & EDIT)
+// 5. LOGICA PENTRU PROFIL (VIEW & EDIT)
 // ==========================================
 function openUserProfile() {
     toggleSideMenu(); 
@@ -419,7 +487,7 @@ function saveUserProfile(e) {
 }
 
 // ==========================================
-// 5. DASHBOARD (TASK / ȘEDINȚE)
+// 6. DASHBOARD (TASK / ȘEDINȚE)
 // ==========================================
 function loadDashboardData() {
     const tasksContainer = document.getElementById('tasksContainer');
@@ -497,7 +565,7 @@ function renderMeetings(meetings) {
 }
 
 // ==========================================
-// 6. EVENIMENTE
+// 7. EVENIMENTE
 // ==========================================
 function renderSavedEventsOrForm() {
     const formContainer = document.getElementById('eventsFormContainer');
@@ -668,7 +736,7 @@ function submitEventsForm(e) {
 }
 
 // ==========================================
-// 7. MEMBRI
+// 8. MEMBRI
 // ==========================================
 function loadDepartmentMembers() {
     if (departmentMembersLoaded) return; 
@@ -742,7 +810,7 @@ function renderMembersList(membri, container) {
 }
 
 // ==========================================
-// 8. JOCUL QUIZ: SINGLEPLAYER & 1V1 BATTLE
+// 9. JOCUL QUIZ: SINGLEPLAYER & 1V1 BATTLE
 // ==========================================
 const allQuizQuestions = [
     { q: "Ce forță aerodinamică se opune în mod direct greutății aeronavei?", options: ["Tracțiunea", "Portanța", "Rezistența la înaintare", "Frecarea"], answer: 1, category: "Aerodinamică", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e0/Airfoil_lift_and_drag.svg/512px-Airfoil_lift_and_drag.svg.png" },
@@ -1002,7 +1070,7 @@ function saveAndFetchLeaderboard(scoreToSave) {
 }
 
 // ==========================================
-// 9. FEED DE POSTĂRI & COMENTARII
+// 10. FEED DE POSTĂRI & COMENTARII
 // ==========================================
 let currentPostIdForComments = null;
 
@@ -1412,7 +1480,7 @@ function submitComment() {
 }
 
 // ==========================================
-// 10. POSTĂRILE PROPRII (ZONA DE PROFIL) ȘI ȘTERGERE
+// 11. POSTĂRILE PROPRII (ZONA DE PROFIL) ȘI ȘTERGERE
 // ==========================================
 function loadProfilePosts() {
     const container = document.getElementById('profilePostsList');
@@ -1507,7 +1575,7 @@ function deleteComment(commentId, postId) {
 }
 
 // ==========================================
-// 11. VIZUALIZARE PROFIL EXTERN
+// 12. VIZUALIZARE PROFIL EXTERN
 // ==========================================
 function openUserProfileModal(targetMemberId) {
     if (!targetMemberId) return;
@@ -1600,7 +1668,7 @@ function loadExternalProfilePosts(targetId) {
 }
 
 // ==========================================
-// 12. LOGICĂ DECONECTARE
+// 13. LOGICĂ DECONECTARE
 // ==========================================
 function logoutUser() {
     localStorage.removeItem('euroavia_session');
@@ -1628,7 +1696,7 @@ function logoutUser() {
 }
 
 // ==========================================
-// 13. ADMINISTRARE TASK-URI ȘI ȘEDINȚE
+// 14. ADMINISTRARE TASK-URI ȘI ȘEDINȚE
 // ==========================================
 function applyAdminPermissions() {
     const rol = currentUserRole.toLowerCase();
@@ -1777,14 +1845,14 @@ function submitNewMeeting(e) {
 }
 
 // ==========================================
-// 14. FIREBASE PUSH NOTIFICATIONS
+// 15. FIREBASE PUSH NOTIFICATIONS
 // ==========================================
 async function initPushNotifications() {
     if (window.Capacitor && window.Capacitor.isNativePlatform()) {
         try {
             const { PushNotifications } = window.Capacitor.Plugins;
             
-            // 1. Cerem permisiunea utilizatorului (Dacă nu este dată)
+            // 1. Cerem permisiunea utilizatorului
             let permStatus = await PushNotifications.checkPermissions();
             if (permStatus.receive === 'prompt') {
                 permStatus = await PushNotifications.requestPermissions();
@@ -1798,7 +1866,8 @@ async function initPushNotifications() {
             // 2. Înregistrăm telefonul la Google Firebase
             await PushNotifications.register();
 
-PushNotifications.addListener('registration', (token) => {
+            // 3. Ascultăm răspunsul Google care ne dă Token-ul FCM
+            PushNotifications.addListener('registration', (token) => {
                 console.log('FCM Token generat:', token.value);
                 
                 // Trimitem Token-ul în liniște către server pentru a-l salva în baza de date
@@ -1815,12 +1884,13 @@ PushNotifications.addListener('registration', (token) => {
 
             // 4. Captăm erorile de înregistrare
             PushNotifications.addListener('registrationError', (error) => {
-                alert('Eroare la înregistrarea Firebase: ' + JSON.stringify(error));
+                console.error('Eroare la înregistrarea Firebase: ', error);
             });
 
-            // 5. Ce se întâmplă când aplicația primește o notificare FIIND DESCHISĂ pe ecran
+            // 5. NOU: Când aplicația primește o notificare FIIND DESCHISĂ pe ecran,
+            // dă doar un refresh la lista de notificări pentru a arăta bulina roșie silențios.
             PushNotifications.addListener('pushNotificationReceived', (notification) => {
-                alert('🔔 Notificare nouă: ' + notification.title + '\n' + notification.body);
+                loadNotifications();
             });
 
         } catch (e) {
