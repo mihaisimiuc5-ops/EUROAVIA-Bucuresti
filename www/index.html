@@ -69,6 +69,17 @@
                     <i class="material-icons">person</i>
                     <span>Profilul tău</span>
                 </button>
+                <!-- Separator vizual pentru Admin -->
+        <div id="adminMenuSeparator" style="display: none; margin: 15px 20px 5px 20px; font-size: 12px; color: #999; text-transform: uppercase; font-weight: bold; letter-spacing: 1px;">
+            Administrare
+        </div>
+
+        <a href="#" id="menuAdminTasks" class="admin-menu-item" onclick="openAdminTasks()">
+            <i class="material-icons">assignment_turned_in</i> Task-uri
+        </a>
+        <a href="#" id="menuAdminMeetings" class="admin-menu-item" onclick="openAdminMeetings()">
+            <i class="material-icons">event_note</i> Meeting-uri
+        </a>
             </div>
 
             <div class="side-menu-footer">
@@ -394,7 +405,88 @@
                     </div>
                 </div>
             </div>
-            
+            <!-- === PAGINA ADMINISTRARE TASK-URI === -->
+<div id="tab-admin-tasks" class="tab-content" style="padding: 20px; padding-bottom: 80px;">
+    <h2 style="color: #003366; margin-bottom: 20px;">Adaugă un Task Nou</h2>
+    <form id="adminTaskForm" onsubmit="submitNewTask(event)" class="card" style="box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+        <div class="event-form-group">
+            <label style="font-weight: 500; font-size: 14px; color: #555;">Titlu Task:</label>
+            <input type="text" id="taskTitle" required style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; margin-top: 5px;">
+        </div>
+        <div class="event-form-group">
+            <label style="font-weight: 500; font-size: 14px; color: #555;">Descriere:</label>
+            <textarea id="taskDesc" required style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; margin-top: 5px; height: 80px;"></textarea>
+        </div>
+        <div class="event-form-group">
+            <label style="font-weight: 500; font-size: 14px; color: #555;">Termen Limită (Deadline):</label>
+            <input type="datetime-local" id="taskDeadline" required style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; margin-top: 5px;">
+        </div>
+        <div class="event-form-group">
+            <label style="font-weight: 500; font-size: 14px; color: #555;">Cui îi este adresat?</label>
+            <select id="taskTargetType" required onchange="updateTaskTargetOptions()" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; margin-top: 5px;">
+                <option value="">Alege tipul...</option>
+                <option value="individual">Membru Individual (din departamentul meu)</option>
+                <option value="departament">Întreg Departamentul Meu</option>
+                <option value="eveniment">Echipa unui Eveniment</option>
+            </select>
+        </div>
+        <div class="event-form-group" id="taskTargetContainer" style="display: none;">
+            <label id="taskTargetLabel" style="font-weight: 500; font-size: 14px; color: #555;">Selectează Destinatarul:</label>
+            <select id="taskTargetValue" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; margin-top: 5px;"></select>
+        </div>
+        <button type="submit" id="btnSubmitTask" class="action-btn" style="width: 100%; margin-top: 15px;">Salvează Task-ul</button>
+    </form>
+</div>
+
+<!-- === PAGINA ADMINISTRARE MEETING-URI === -->
+<div id="tab-admin-meetings" class="tab-content" style="padding: 20px; padding-bottom: 80px;">
+    <h2 style="color: #003366; margin-bottom: 20px;">Programează o Ședință</h2>
+    <form id="adminMeetingForm" onsubmit="submitNewMeeting(event)" class="card" style="box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+        <div class="event-form-group">
+            <label style="font-weight: 500; font-size: 14px; color: #555;">Titlu Ședință:</label>
+            <input type="text" id="meetingTitle" required style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; margin-top: 5px;">
+        </div>
+        <div class="event-form-group">
+            <label style="font-weight: 500; font-size: 14px; color: #555;">Data și Ora:</label>
+            <input type="datetime-local" id="meetingDate" required style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; margin-top: 5px;">
+        </div>
+        <div class="event-form-group">
+            <label style="font-weight: 500; font-size: 14px; color: #555;">Format:</label>
+            <select id="meetingType" required onchange="toggleMeetingLocation()" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; margin-top: 5px;">
+                <option value="offline">Fizic (Offline)</option>
+                <option value="online">Online (Google Meet/Zoom)</option>
+            </select>
+        </div>
+        <div class="event-form-group">
+            <label id="meetingLocationLabel" style="font-weight: 500; font-size: 14px; color: #555;">Locație / Sală:</label>
+            <input type="text" id="meetingLocation" required style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; margin-top: 5px;">
+        </div>
+<div class="event-form-group">
+            <label style="font-weight: 500; font-size: 14px; color: #555;">Audiență (Cine participă?)</label>
+            <select id="meetingAudience" required onchange="toggleMeetingEvent()" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; margin-top: 5px;">
+                <option value="departament">Doar Departamentul Meu</option>
+                <option value="eveniment">Echipa unui Eveniment</option>
+                <!-- Opțiuni rezervate Adminilor generali -->
+                <option id="optAllOrg" value="all" style="display: none;">Tot ONG-ul (Toate Departamentele)</option>
+                <option id="optOrga" value="orga" style="display: none;">Toți Membrii ORGA</option>
+            </select>
+        </div>
+        <!-- Recipient pentru alegerea evenimentului (ascuns implicit) -->
+        <div class="event-form-group" id="meetingEventContainer" style="display: none;">
+            <label style="font-weight: 500; font-size: 14px; color: #555;">Selectează Evenimentul:</label>
+            <select id="meetingTargetEvent" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; margin-top: 5px;">
+                <option value="aircraft_workshop">Aircraft Workshop</option>
+                <option value="drone_workshop">Drone Workshop</option>
+                <option value="rocket_workshop">Rocket Workshop</option>
+                <option value="head_start_session">Head Start Session</option>
+                <option value="aeroconnect">Aeroconnect</option>
+                <option value="aerocamp">Aerocamp</option>
+                <option value="eurocupa">Eurocupa</option>
+            </select>
+        </div>
+        <button type="submit" id="btnSubmitMeeting" class="action-btn" style="width: 100%; margin-top: 15px;">Programează Ședința</button>
+    </form>
+</div>
         </main>
 
         <!-- Butoane Plutitoare Globale -->

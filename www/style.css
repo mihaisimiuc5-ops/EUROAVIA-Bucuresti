@@ -269,3 +269,28 @@ body, html { background-color: #f4f7f6; color: #333; height: 100vh; height: 100d
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
 }
+
+/* --- STILURI PENTRU BUTOANELE DE ADMINISTRARE DIN MENIU --- */
+.admin-menu-item {
+    display: none; /* Sunt ascunse inițial, le arată app.js doar liderilor */
+    align-items: center;
+    gap: 15px;
+    padding: 12px 20px;
+    text-decoration: none;
+    font-size: 16px;
+    color: #003366 !important; 
+    font-weight: 600;
+    background-color: rgba(0, 51, 102, 0.04); /* Un fundal foarte fin albastru */
+    border-left: 4px solid #003366; /* Linia care arată că e meniu special */
+    margin-bottom: 5px;
+    transition: background-color 0.2s;
+}
+
+.admin-menu-item:hover {
+    background-color: rgba(0, 51, 102, 0.1);
+}
+
+.admin-menu-item .material-icons {
+    color: #003366;
+    font-size: 22px;
+}

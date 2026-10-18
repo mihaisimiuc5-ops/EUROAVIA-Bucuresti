@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "89383094272",
+    "project_id": "euroavia-app-becb2",
+    "storage_bucket": "euroavia-app-becb2.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:89383094272:android:771db0191cb1af891770e5",
+        "android_client_info": {
+          "package_name": "ro.euroaviabucuresti.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC2eiDCHxi6qnl05Kl3WjUwH8f2-xglKdE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -6,6 +6,9 @@ let currentDept = '';
 let currentUserName = '';
 let currentUserGooglePic = 'icon-192.png';
 let profileCacheBuster = new Date().getTime(); 
+let currentUserRole = ''; 
+let currentUserIsAdmin = false;
+let myDepartmentMembers = [];
 
 const API_URL = 'https://app.euroavia-bucuresti.ro/api/server.php';
 let userSavedEvents = [];
@@ -37,13 +40,14 @@ window.onload = async function () {
         });
     }
 
-    // --- FORȚARE STATUS BAR ALBASTRU (Ignorăm Dark Mode-ul din Android) ---
+    // --- FORȚARE STATUS BAR TRANSPARENT (Ignorăm Dark Mode-ul din Android) ---
     if (window.Capacitor && window.Capacitor.isNativePlatform()) {
         try {
             const { StatusBar } = window.Capacitor.Plugins;
             if (StatusBar) {
                 const forceStatusBar = () => {
                     StatusBar.setOverlaysWebView({ overlay: true }).catch(()=>{});
+                    StatusBar.setBackgroundColor({ color: '#00000000' }).catch(()=>{}); // 8 zerouri = Transparent
                     StatusBar.setStyle({ style: 'DARK' }).catch(()=>{}); // Păstrează textul/iconițele albe
                 };
                 forceStatusBar();
@@ -61,6 +65,8 @@ window.onload = async function () {
             currentDept = data.departament;
             currentUserName = data.nume_complet;
             currentUserGooglePic = data.pic;
+            currentUserRole = data.rol || '';
+            currentUserIsAdmin = data.is_admin || false;
 
             // Ascundem ecranul de login și arătăm aplicația
             document.getElementById('loginScreen').style.display = 'none';
@@ -71,6 +77,11 @@ window.onload = async function () {
             const profileImg = document.getElementById('menuProfilePic');
             profileImg.src = `${API_URL}?action=get_profile_pic&member_id=${currentMemberId}&t=${profileCacheBuster}`;
             profileImg.onerror = function() { this.onerror = null; this.src = currentUserGooglePic; };
+
+            applyAdminPermissions();
+            
+            // NOU: Inițializăm notificările Firebase fiindcă e deja logat
+            initPushNotifications();
 
             setupDynamicTabs();
             loadDashboardData(); 
@@ -183,15 +194,21 @@ function handleServerLoginResponse(data) {
         currentDept = data.departament;
         currentUserName = data.nume_complet;
         currentUserGooglePic = data.googlePicUrl || 'icon-192.png';
+        currentUserRole = data.rol || '';
+        currentUserIsAdmin = data.is_admin || false;
 
         const sessionData = {
             id: currentMemberId,
             departament: currentDept,
             nume_complet: currentUserName,
             pic: currentUserGooglePic,
-            email: data.emailUser
+            email: data.emailUser,
+            rol: currentUserRole,
+            is_admin: currentUserIsAdmin
         };
         localStorage.setItem('euroavia_session', JSON.stringify(sessionData));
+        
+        applyAdminPermissions();
 
         document.getElementById('loginScreen').style.display = 'none';
         document.getElementById('mainApp').style.display = 'flex';
@@ -204,6 +221,9 @@ function handleServerLoginResponse(data) {
             this.src = currentUserGooglePic;
         };
         
+        // NOU: Inițializăm notificările Firebase imediat după logarea nouă
+        initPushNotifications();
+
         setupDynamicTabs();
         loadDashboardData(); 
 
@@ -319,7 +339,6 @@ function openUserProfile() {
         document.getElementById('profilePageBio').innerText = 'Eroare la încărcarea datelor.';
     });
 
-    // Încărcăm postările proprii în profil
     loadProfilePosts();
 }
 
@@ -367,7 +386,6 @@ function saveUserProfile(e) {
                 updateImageFallback('profilePageImg');
                 updateImageFallback('menuProfilePic');
 
-                // Resetăm inputul și aspectul butonului
                 fileInput.value = '';
                 if(typeof updateFileName === 'function') updateFileName(fileInput, 'profileMediaLabel');
                 
@@ -1607,4 +1625,201 @@ function logoutUser() {
     }
     
     window.location.reload();
+}
+
+// ==========================================
+// 13. ADMINISTRARE TASK-URI ȘI ȘEDINȚE
+// ==========================================
+function applyAdminPermissions() {
+    const rol = currentUserRole.toLowerCase();
+    const isLider = rol.includes('supervizor') || rol.includes('coordonator');
+
+    if (isLider || currentUserIsAdmin) {
+        document.getElementById('adminMenuSeparator').style.display = 'block';
+    }
+
+    if (isLider) document.getElementById('menuAdminTasks').style.display = 'flex';
+    
+    if (isLider || currentUserIsAdmin) {
+        document.getElementById('menuAdminMeetings').style.display = 'flex';
+        if (currentUserIsAdmin) {
+            document.getElementById('optAllOrg').style.display = 'block';
+            document.getElementById('optOrga').style.display = 'block';
+        }
+    }
+}
+
+function openAdminTasks() {
+    toggleSideMenu();
+    switchTab('admin-tasks', 'Creare Task', null);
+    
+    fetch(`${API_URL}?action=get_department_members&departament=${currentDept}`)
+    .then(res => res.json())
+    .then(data => { if(data.success) myDepartmentMembers = data.membri; });
+}
+
+function openAdminMeetings() {
+    toggleSideMenu();
+    switchTab('admin-meetings', 'Programează Ședință', null);
+}
+
+function updateTaskTargetOptions() {
+    const tip = document.getElementById('taskTargetType').value;
+    const container = document.getElementById('taskTargetContainer');
+    const select = document.getElementById('taskTargetValue');
+    const label = document.getElementById('taskTargetLabel');
+
+    select.innerHTML = '';
+    if (tip === '') { container.style.display = 'none'; return; }
+    container.style.display = 'block';
+
+    if (tip === 'individual') {
+        label.innerText = 'Alege Membrul (din dept. tău):';
+        select.required = true;
+        myDepartmentMembers.forEach(m => {
+            select.innerHTML += `<option value="${m.id}">${m.nume} ${m.prenume}</option>`;
+        });
+        if(myDepartmentMembers.length === 0) select.innerHTML = '<option value="">Nu am putut încărca membrii</option>';
+    } else if (tip === 'departament') {
+        label.innerText = 'Departament Target:';
+        select.required = false;
+        select.innerHTML = `<option value="${currentDept}">${currentDept}</option>`;
+    } else if (tip === 'eveniment') {
+        label.innerText = 'Alege Evenimentul:';
+        select.required = true;
+        const events = [
+            {v: 'aircraft_workshop', t: 'Aircraft Workshop'}, {v: 'drone_workshop', t: 'Drone Workshop'},
+            {v: 'rocket_workshop', t: 'Rocket Workshop'}, {v: 'head_start_session', t: 'Head Start Session'},
+            {v: 'aeroconnect', t: 'Aeroconnect'}, {v: 'aerocamp', t: 'Aerocamp'}, {v: 'eurocupa', t: 'Eurocupa'}
+        ];
+        events.forEach(e => select.innerHTML += `<option value="${e.v}">${e.t}</option>`);
+    }
+}
+
+function toggleMeetingLocation() {
+    const tip = document.getElementById('meetingType').value;
+    const lbl = document.getElementById('meetingLocationLabel');
+    const inp = document.getElementById('meetingLocation');
+    
+    if (tip === 'online') {
+        lbl.innerText = 'Link Google Meet / Zoom:';
+        inp.placeholder = 'https://meet.google.com/...';
+        inp.type = 'url';
+    } else {
+        lbl.innerText = 'Locație / Sală:';
+        inp.placeholder = 'ex: AN010, Rectorat';
+        inp.type = 'text';
+    }
+}
+
+function toggleMeetingEvent() {
+    const audienta = document.getElementById('meetingAudience').value;
+    document.getElementById('meetingEventContainer').style.display = (audienta === 'eveniment') ? 'block' : 'none';
+}
+
+function submitNewTask(e) {
+    e.preventDefault();
+    const btn = document.getElementById('btnSubmitTask');
+    btn.innerText = 'Se salvează...'; btn.disabled = true;
+
+    const payload = {
+        action: 'create_task',
+        member_id: currentMemberId,
+        departament: currentDept,
+        titlu: document.getElementById('taskTitle').value,
+        descriere: document.getElementById('taskDesc').value,
+        deadline: document.getElementById('taskDeadline').value,
+        tip_atribuire: document.getElementById('taskTargetType').value,
+        target_value: document.getElementById('taskTargetValue').value
+    };
+
+    fetch(API_URL, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) })
+    .then(res => res.json()).then(data => {
+        btn.innerText = 'Salvează Task-ul'; btn.disabled = false;
+        if(data.success) {
+            alert('Task adăugat cu succes!');
+            document.getElementById('adminTaskForm').reset();
+            updateTaskTargetOptions();
+            loadDashboardData(); 
+            switchTab('tasks', 'Dashboard'); 
+        } else alert('Eroare: ' + data.message);
+    }).catch(err => { btn.innerText = 'Salvează Task-ul'; btn.disabled = false; alert('Eroare de rețea.'); });
+}
+
+function submitNewMeeting(e) {
+    e.preventDefault();
+    const btn = document.getElementById('btnSubmitMeeting');
+    btn.innerText = 'Se programează...'; btn.disabled = true;
+
+    const payload = {
+        action: 'create_meeting',
+        member_id: currentMemberId,
+        departament: currentDept,
+        titlu: document.getElementById('meetingTitle').value,
+        data_sedintei: document.getElementById('meetingDate').value,
+        tip_sedinta: document.getElementById('meetingType').value,
+        locatie_link: document.getElementById('meetingLocation').value,
+        audienta: document.getElementById('meetingAudience').value,
+        target_event: document.getElementById('meetingTargetEvent').value 
+    };
+
+    fetch(API_URL, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) })
+    .then(res => res.json()).then(data => {
+        btn.innerText = 'Programează Ședința'; btn.disabled = false;
+        if(data.success) {
+            alert('Ședință adăugată cu succes!');
+            document.getElementById('adminMeetingForm').reset();
+            document.getElementById('meetingEventContainer').style.display = 'none';
+            loadDashboardData(); 
+            switchTab('tasks', 'Dashboard');
+        } else alert('Eroare: ' + data.message);
+    }).catch(err => { btn.innerText = 'Programează Ședința'; btn.disabled = false; alert('Eroare de rețea.'); });
+}
+
+// ==========================================
+// 14. FIREBASE PUSH NOTIFICATIONS
+// ==========================================
+async function initPushNotifications() {
+    if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+        try {
+            const { PushNotifications } = window.Capacitor.Plugins;
+            
+            // 1. Cerem permisiunea utilizatorului (Dacă nu este dată)
+            let permStatus = await PushNotifications.checkPermissions();
+            if (permStatus.receive === 'prompt') {
+                permStatus = await PushNotifications.requestPermissions();
+            }
+
+            if (permStatus.receive !== 'granted') {
+                console.warn('Permisiunea pentru notificări nu a fost acordată!');
+                return;
+            }
+
+            // 2. Înregistrăm telefonul la Google Firebase
+            await PushNotifications.register();
+
+            // 3. Ascultăm răspunsul Google care ne dă Token-ul FCM
+            PushNotifications.addListener('registration', (token) => {
+                console.log('FCM Token generat:', token.value);
+                
+                // Afișare de test pe ecran pentru a valida configurarea!
+                alert("Token generat cu succes! Primele caractere: " + token.value.substring(0, 15) + "...");
+                
+                // TODO: Salvare Token în MySQL (prin server.php)
+            });
+
+            // 4. Captăm erorile de înregistrare
+            PushNotifications.addListener('registrationError', (error) => {
+                alert('Eroare la înregistrarea Firebase: ' + JSON.stringify(error));
+            });
+
+            // 5. Ce se întâmplă când aplicația primește o notificare FIIND DESCHISĂ pe ecran
+            PushNotifications.addListener('pushNotificationReceived', (notification) => {
+                alert('🔔 Notificare nouă: ' + notification.title + '\n' + notification.body);
+            });
+
+        } catch (e) {
+            console.warn("Eroare la inițializarea Push Notifications:", e);
+        }
+    }
 }
