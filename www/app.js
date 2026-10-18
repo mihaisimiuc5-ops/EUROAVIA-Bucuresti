@@ -1798,14 +1798,19 @@ async function initPushNotifications() {
             // 2. Înregistrăm telefonul la Google Firebase
             await PushNotifications.register();
 
-            // 3. Ascultăm răspunsul Google care ne dă Token-ul FCM
-            PushNotifications.addListener('registration', (token) => {
+PushNotifications.addListener('registration', (token) => {
                 console.log('FCM Token generat:', token.value);
                 
-                // Afișare de test pe ecran pentru a valida configurarea!
-                alert("Token generat cu succes! Primele caractere: " + token.value.substring(0, 15) + "...");
-                
-                // TODO: Salvare Token în MySQL (prin server.php)
+                // Trimitem Token-ul în liniște către server pentru a-l salva în baza de date
+                fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'save_fcm_token',
+                        member_id: currentMemberId,
+                        token: token.value
+                    })
+                }).catch(err => console.error('Eroare salvare token', err));
             });
 
             // 4. Captăm erorile de înregistrare
